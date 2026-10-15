@@ -175,6 +175,8 @@ class MoveFactory{
 
 void printChessboard(uint8_t *chessboard);
 
+void printChessboardFancy(uint8_t *chessboard);
+
 bool isPlayerInCheck(uint8_t *chessboard, uint8_t player);
 
 bool isSquareAttackedByPawn(uint8_t *chessboard, uint8_t pawn, uint8_t square);
@@ -191,8 +193,11 @@ bool isSquareAttackedByKing(uint8_t *chessboard, uint8_t king, uint8_t square);
 
 uint8_t *getAllPiecesBitboard(uint8_t *chessboard);
 
-void printChessboardFancy(uint8_t *chessboard);
+uint8_t *getPlayerPiecesBitboard(uint8_t *chessboard, uint8_t player);
 
+std::vector<*Move> getPlayersLegalPawnMoves(uint8_t *chessboard, uint8_t player);
+
+std::vector<*Move> getPawnLegalMoves(uint8_t *chessboard, uint8_t player, uint8_t pawn, uint8_t pawn_square, uint8_t oppoent_piece_index_start, uint8_t oppoenet_piece_index_end);
 
 
 

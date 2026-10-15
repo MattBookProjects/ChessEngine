@@ -1040,20 +1040,25 @@ uint8_t *getPlayerPiecesBitboard(uint8_t *chessboard, uint8_t player){
     return bitboard;
 }
 
-std::vector<Move> getLegalMoves(uint8_t *chessboard){
-    uint8_t
+bool isMoveLegal(uint8_t *chessboard, Move *move){
+    uint8_t player = chessboard[96] & 128 ? BLACK: WHITE;
+    uint8_t *board_after_move = move->makeMove(chessboard);
+    return !isPlayerInCheck(board_after_move, player);
 }
 
 
-std::vector<Move> getLegalPawnMoves(uint8_t *chessboard, uint8_t player){
+std::vector<Move> getLegalMoves(uint8_t *chessboard){
+    
+}
+
+
+
+std::vector<Move> getPlayersLegalPawnMoves(uint8_t *chessboard, uint8_t player){
     uint8_t opponent = player + 1 % 2;
-    uint8_t pawn, knight, bishop, rook, queen, first_rank, penultimate_rank, last_rank;
+    uint8_t pawn, knight, bishop, rook, queen, first_rank, penultimate_rank, last_rank, enpassant_rank;
     int8_t step, left_attacked_square_diff, right_attacked_square_diff;
-    
-    //uint8_t pawn = player == WHITE ? WHITE_PAWN: BLACK_PAWN;
-    //uint8_t opponent_pawn = pawn == WHITE_PAWN ? BLACK_PAWN: WHITE_PAWN;
-    
     std::vector<*Move> potential_moves = new std::vector<>();
+    std::vector<*Move> legal_moves = new std::vector<>();
     uint8_t *all_pieces_bitboard = getAllPiecesBitboard(chessboard);
     uint8_t *opponent_pieces_bitboard = getPlayerPiecesBitboard(opponent);
 
@@ -1071,6 +1076,7 @@ std::vector<Move> getLegalPawnMoves(uint8_t *chessboard, uint8_t player){
         step = 1;
         left_attacked_square_diff = 7;
         right_attacked_square_diff = 9;
+        enpassant_rank = 4;
     }
     else{
         pawn = BLACK_PAWN;
@@ -1086,6 +1092,7 @@ std::vector<Move> getLegalPawnMoves(uint8_t *chessboard, uint8_t player){
         step = -1;
         left_attacked_square_diff = -9;
         right_attacked_square_diff = -7;
+        enpassant_rank = 3;
     }
     for(int i = first_rank; i != penultimate_rank; i+=step){
         uint8_t rank_value = chessboard[8*pawn+i];
@@ -1118,125 +1125,254 @@ std::vector<Move> getLegalPawnMoves(uint8_t *chessboard, uint8_t player){
                     }
                 }
             }
+            if(i == enpassant_rank && chessboard[97+opponent]){
+                uint8_t enpassant_value = chessboard[97+opponent];
+                if(enpassant_value == pow >> 1){
+                    potential_moves.push_back(new EnpassantMove(player, j, j-1));
+                }
+                if(enpassant_value == pow << 1){
+                    potential_moves.push_back(new EnpassantMove(player, j, j+1));
+                }
+                
+            }
             rank_value -= pow;
         }
     }
-
-
-    if(pawn == WHITE_PAWN){
-        for(int i = 0; i < 6; i++){     
-            uint8_t rank_value = chessboard[8*WHITE_PAWN+i];
-            if(rank_value == 0){
+    uint8_t penultimate_rank_value = chessboard[8*pawn+penultimate_rank];
+    if(penultimate_rank_value != 0){
+        for(uint8_t j = 7; j <= 0; j++){
+            uint8_t pow = pow_uint8((uint8_t)2, j);
+            if(rank_value<pow){
                 continue;
             }
-            for(int j = 7; j <= 0; j++){
-                uint8_t pow = pow_uint8((uint8_t)2, (uint8_t)j);
-                if(rank_value<pow){
-                    continue;
-                }
-                uint8_t old_square = 8*i + j;
-                if(!(all_pieces_bitboard[i+1] & pow)){
-                    uint8_t new_square = old_square + 8;
-                    potential_moves.push_back(new BasicMove((uint8_t)WHITE_PAWN, old_square, new_square));   
-                }
-                if(j > 0 && (opponent_pieces_bitboard[i+1] & (pow >> 1))){
-                    for(uint8_t k=BLACK_PAWN; k<BLACK_KING; k++){
-                        if(chessboard[8*k+i+1] & (pow >> 1)){
-                            uint8_t target_square = old_square + 7;
-                            potential_moves.push_back(new TakeMove((uint8_t)WHITE_PAWN, old_square, k, target_square));
-                        }
-                    }
-                }
-                if(j<7 && (opponent_pieces_bitboard[i+1] & (pow << 1))){
-                    for(uint8_t k=BLACK_PAWN; k<BLACK_KING; k++){
-                        if(chessboard[8*k+i+1] & (pow << 1)){
-                            uint8_t target_square = old_square + 9;
-                            potential_moves.push_back(new TakeMove((uint8_t)WHITE_PAWN, old_square, k, target_square));
-                        }
-                    }
-                }
-                rank_value -= pow;
+            if(!(all_pieces_bitboard[last_rank] & pow)){
+                potential_moves.push_back(new PromotionMove((uint8_t)pawn, j, (uint8_t)knight));   
+                potential_moves.push_back(new PromotionMove((uint8_t)pawn, j, (uint8_t)bishop));   
+                potential_moves.push_back(new PromotionMove((uint8_t)pawn, j, (uint8_t)rook));    
+                potential_moves.push_back(new PromotionMove((uint8_t)pawn, j, (uint8_t)queen));   
             }
-         
-        }
-        uint8_t penultimate_rank_value = chessboard[8*WHITE_PAWN+6];
-        if(penultimate_rank_value != 0){
-            for(uint8_t j = 7; j <= 0; j++){
-                uint8_t pow = pow_uint8((uint8_t)2, j);
-                if(rank_value<pow){
-                    continue;
-                }
-                if(!(all_pieces_bitboard[7] & pow)){
-                    potential_moves.push_back(new PromotionMove((uint8_t)WHITE_PAWN, j, (uint8_t)WHITE_KNIGHT));   
-                    potential_moves.push_back(new PromotionMove((uint8_t)WHITE_PAWN, j, (uint8_t)WHITE_BISHOP));   
-                    potential_moves.push_back(new PromotionMove((uint8_t)WHITE_PAWN, j, (uint8_t)WHITE_ROOK));    
-                    potential_moves.push_back(new PromotionMove((uint8_t)WHITE_PAWN, j, (uint8_t)WHITE_QUEEN));   
-                }
-                if(opponent_pieces_bitboard[7] & (pow<<1)){
-                    for(uint8_t k=BLACK_PAWN; k<BLACK_KING; k++){
-                        if(chessboard[8*k+i+1] & (pow << 1)){
-                            uint8_t target_square = old_square + 9;
-                            potential_moves.push_back(new TakeWithPromotionMove((uint8_t)WHITE_PAWN, j, k, j+1, (uint8_t)WHITE_KNIGHT));   
-                            potential_moves.push_back(new TakeWithPromotionMove((uint8_t)WHITE_PAWN, j, k, j+1, (uint8_t)WHITE_BISHOP));   
-                            potential_moves.push_back(new TakeWithPromotionMove((uint8_t)WHITE_PAWN, j, k, j+1, (uint8_t)WHITE_ROOK));    
-                            potential_moves.push_back(new TakeWithPromotionMove((uint8_t)WHITE_PAWN, j, k, j+1, (uint8_t)WHITE_QUEEN));
-                        }
+            if(opponent_pieces_bitboard[last_rank] & (pow<<1)){
+                for(uint8_t k=opponent_pawn; k<opponent_king; k++){
+                    if(j > 0 && chessboard[8*k+last_rank] & (pow >> 1)){
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j-1, (uint8_t)knight));   
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j-1, (uint8_t)bishop));   
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j-1, (uint8_t)rook));    
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j-1, (uint8_t)queen));
+                    }
+                    if(j < 7 && chessboard[8*k+last_rank] & (pow << 1)){
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j+1, (uint8_t)knight));   
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j+1, (uint8_t)bishop));   
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j+1, (uint8_t)rook));    
+                        potential_moves.push_back(new TakeWithPromotionMove((uint8_t)pawn, j, k, j+1, (uint8_t)queen));
                     }
                 }
+            }
         }
+    }
+    std::vector<*Move>::iterator it;
+    for(it=potential_moves.begin(); it != potential_moves.end(); it++){
+        if(isMoveLegal(chessboard, *it)){
+            legal_moves.push_back(*it);
+        } else{
+            delete *it;
+        }
+    }
+    return legal_moves;
+}
+   
+
+std::vector<Move> getLegalKnightMoves(uint8_t *chessboard, uint8_t player){
+    std::vector<*Move> potential_moves = new std::vector<>();
+    std::vector<*Move> legal_moves = new std::vector<>();
+    uint8_t knight, opponent, opponent_pawn, opponent_king;
+    uint8_t *opponent_pieces_bitboard, *all_pieces_bitboard;
+    if(player == WHITE){
+        knight = WHITE_KNIGHT;
+        opponent = BLACK;
+        opponent_pawn = BLACK_PAWN;
+        opponent_king = BLACK_KING;
     } else{
-          for(int i = 7; i > 1; i--){     
-            uint8_t rank_value = chessboard[8*BLACK_PAWN+i];
-            if(rank_value == 0){
+        knight = BLACK_KNIGHT;
+        opponent = WHITE;
+        opponent_pawn = WHITE_PAWN;
+        opponent_king = WHITE_KING;
+    }
+    opponent_pieces_bitboard = getPlayerPiecesBitboard(chessboard, opponent);
+    all_pieces_bitboard = getAllPiecesBitboard(chessboard);
+    for(uint8_t i = 0; i < 8; i++){
+        uint8_t rank_value = chessboard[8*knight + i] 
+        if(rank_value == 0){
+            continue;
+        }
+        for(uint8_t j = 7; j>=0; j++){
+            uint8_t pow = pow_uint8((uint8_t)2, j);
+            uint8_t old_square = 8*i+j;
+            uint8_t new_square;
+            if(rank_value < pow){
                 continue;
             }
-            for(uint8_t j = 7; j <= 0; j++){
-                uint8_t pow = pow_uint8((uint8_t)2, j);
-                if(rank_value<pow){
-                    continue;
+            if(i < 6 && j > 0){
+                new_square = old_square + 15;
+                if(!(all_pieces_bitboard[i+2] & pow >> 1)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
                 }
-                uint8_t old_square = 8*i + j;
-                if(!(all_pieces_bitboard[i-1] & pow)){
-                    uint8_t new_square = old_square - 8;
-                    potential_moves.push_back(new BasicMove((uint8_t)BLACK_PAWN, old_square, new_square));   
-                }
-                if(j > 0 && (opponent_pieces_bitboard[i-1] & (pow >> 1))){
-                    for(uint8_t k=WHITE_PAWN; k<WHITE_KING; k++){
-                        if(chessboard[8*k+i-1] & (pow >> 1)){
-                            uint8_t target_square = old_square - 9;
-                            potential_moves.push_back(new TakeMove((uint8_t)BLACK_PAWN_PAWN, old_square, k, target_square));
-                        }
-                    }
-                }
-                if(j<7 && (opponent_pieces_bitboard[i-1] & (pow << 1))){
-                    for(uint8_t k=WHITE_PAWN; k<WHITE_KING; k++){
-                        if(chessboard[8*k+i-1] & (pow << 1)){
-                            uint8_t target_square = old_square - 7;
-                            potential_moves.push_back(new TakeMove((uint8_t)BLACK_PAWN_PAWN, old_square, k, target_square));
+                else if(opponent_pieces_bitboard[i+2] & pow >> 1){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i+2] & pow >> 1){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
                         }
                     }
                 }
             }
-         
-        }
-        uint8_t penultimate_rank_value = chessboard[8*WHITE_PAWN+1];
-        if(penultimate_rank_value != 0){
-            for(uint8_t j = 7; j <= 0; j++){
-                uint8_t pow = pow_uint8((uint8_t)2, j);
-                if(rank_value<pow){
-                    continue;
+            if(i < 6 && j < 7){
+                new_square = old_square + 17;
+                if(!(all_pieces_bitboard[i+2] & pow << 1)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
                 }
-                if(!(all_pieces_bitboard[0] & pow)){
-                    potential_moves.push_back(new PromotionMove((uint8_t)BLACK_PAWN, j, (uint8_t)BLACK_KNIGHT));   
-                    potential_moves.push_back(new PromotionMove((uint8_t)BLACK_PAWN, j, (uint8_t)BLACK_BISHOP));   
-                    potential_moves.push_back(new PromotionMove((uint8_t)BLACK_PAWN, j, (uint8_t)BLACK_ROOK));    
-                    potential_moves.push_back(new PromotionMove((uint8_t)BLACK_PAWN, j, (uint8_t)BLACK_QUEEN));   
+                else if(opponent_pieces_bitboard[i+2] & pow << 1){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i+2] & pow << 1){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
+                        }
+                    }
                 }
+            }
+             if(i < 7 && j > 1){
+                new_square = old_square + 6;
+                if(!(all_pieces_bitboard[i+1] & pow >> 2)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
+                }
+                else if(opponent_pieces_bitboard[i+1] & pow >> 2){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i+1] & pow >> 2){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
+                        }
+                    }
+                }
+            }
+            if(i < 7 && j < 6){
+                new_square = old_square + 10;
+                if(!(all_pieces_bitboard[i+1] & pow << 2)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
+                }
+                else if(opponent_pieces_bitboard[i+1] & pow << 2){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i+1] & pow << 2){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
+                        }
+                    }
+                }
+            }
+            if(i > 0 && j > 1){
+                new_square = old_square -10;
+                if(!(all_pieces_bitboard[i-1] & pow >> 2)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
+                }
+                else if(opponent_pieces_bitboard[i-1] & pow >> 2){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i-1] & pow >> 2){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
+                        }
+                    }
+                }
+            }
+            if(i > 0 && j < 6){
+                new_square = old_square -6;
+                if(!(all_pieces_bitboard[i-1] & pow << 2)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
+                }
+                else if(opponent_pieces_bitboard[i-1] & pow << 2){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i-1] & pow << 2){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
+                        }
+                    }
+                }
+            }
+            if(i > 1 && j > 0){
+                new_square = old_square - 17;
+                if(!(all_pieces_bitboard[i-2] & pow >> 1)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
+                }
+                else if(opponent_pieces_bitboard[i-2] & pow >> 1){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i-2] & pow >> 1){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
+                        }
+                    }
+                }
+            }
+            if(i > 1 && j < 7){
+                new_square = old_square - 15;
+                if(!(all_pieces_bitboard[i-2] & pow << 1)){
+                    potential_moves.push_back(new Move(knight, old_square, new_square));
+                }
+                else if(opponent_pieces_bitboard[i-2] & pow << 1){
+                    for(uint8_t k=opponent_pawn; k < opponent_king; k++){
+                        if(chessboard[8*k+i-2] & pow << 1){
+                            potential_moves.push_back(new TakeMove(knight, old_square, k, new_square));
+                            break;
+                        }
+                    }
+                }
+            }
         }
-    }    
-}   
+    }
+    std::vector<*Move>::iterator it;
+    for(it=potential_moves.begin(); it!=potential_moves.end(); it++){
+        if(isMoveLegal(chessboard, *it)){
+            legal_moves.push_back(*it);
+        }else{
+            delete *it;
+        }
+    }
+    return legal_moves;
+}
 
+std::vector<*Move> getBishopLegalMoves(uint8_t *chessboard, uint8_t player){
+    std::vector<*Move> potential_moves = new std::vector<>();
+    std::vector<*Move> legal_moves = new std::vector<>();
+    uint8_t bishop, opponent, opponent_pawn, opponent_king;
+    uint8_t *opponent_pieces_bitboard, *all_pieces_bitboard;
+    if(player == WHITE){
+        bishop = WHITE_BISHOP;
+        opponent = BLACK;
+        opponent_pawn = BLACK_PAWN;
+        opponent_king = BLACK_KING;
+    } else{
+        bishop = BLACK_BISHOP;
+        opponent = WHITE;
+        opponent_pawn = WHITE_PAWN;
+        opponent_king = WHITE_KING;
+    }
+    opponent_pieces_bitboard = getPlayerPiecesBitboard(chessboard, opponent);
+    all_pieces_bitboard = getAllPiecesBitboard(chessboard);
+    for(uint8_t i = 0; i < 8; i++){
+        uint8_t rank_value = chessboard[8*bishop + i]; 
+        if(rank_value == 0){
+            continue;
+        }
+        for(uint8_t j = 7; j>=0; j++){
+            uint8_t pow = pow_uint8((uint8_t)2, j);
+            uint8_t old_square = 8*i+j;
+            uint8_t new_square;
+            if(rank_value < pow){
+                continue;
+            }
+            uint8_t bishop_rank = i;
+            uint8_t bishop_file = j;
+            int8_t current_rank = bishop_rank + 1;
+            int8_t current_file = bishop_file - 1;
+            while(current_rank < 8 && current_file >= 0){
+                
+            }
 
-std::vector<Move> getLegalKnightMoves(uint8_t *chessboard){
-
+    }
 }
