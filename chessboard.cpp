@@ -1,5 +1,349 @@
 #include "chessboard.hpp"
 
+
+const Player WHITE = 0;
+const Player BLACK = 1;
+
+const Piece WHITE_PAWN = 0;
+const Piece WHITE_KNIGHT = 1;
+const Piece WHITE_BISHOP = 2;
+const Piece WHITE_ROOK = 3;
+const Piece WHITE_QUEEN = 4;
+const Piece WHITE_KING = 5;
+const Piece BLACK_PAWN = 6;
+const Piece BLACK_KNIGHT = 7;
+const Piece BLACK_BISHOP = 8;
+const Piece BLACK_ROOK = 9;
+const Piece BLACK_QUEEN = 10;
+const Piece BLACK_KING = 11;
+
+const Result WHITE_WIN = 1;
+const Result DRAW = 0;
+const Result BLACK_WIN = -1;
+
+const std::array<Piece, 6> WHITE_PIECES = {WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING};
+const std::array<Piece, 6> BLACK_PIECES = {BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING};
+
+Chessboard::Chessboard
+(
+    std::array<uint64_t, 12> bitboard,
+    enum Player player_to_move, 
+    bool can_white_castle, 
+    bool can_black_castle, 
+    int8_t white_enpassant, 
+    int8_t black_enpassant
+)
+{
+    this->bitboard = bitboard;
+    this->player_to_move = player_to_move;
+    this->can_white_castle = can_white_castle;
+    this->can_black_castle = can_black_castle;
+    this->white_enpassant = white_enpassant;
+    this->black_enpassant = black_enpassant;
+    
+}
+
+
+Chessboard Chessboard::initChessboard(){
+    Chessboard chessboard = Chessboard();
+    chessboard.initPawns();
+    chessboard.initKnights();
+    chessboard.initBishops();
+    chessboard.initRooks();
+    chessboard.initQueens();
+    chessboard.initKings();
+    return chessboard;
+}
+
+void Chessboard::initPawns(){
+    for(int i = 0; i < 8; i++){
+        this->bitboard[WHITE_PAWN] |= squareIndexToU64(8+i);
+        this->bitboard[BLACK_PAWN] != squareIndexToU64(56-i);
+    }
+}
+
+void Chessboard::initKnights(){
+    this->bitboard[WHITE_KNIGHT] |= (squareIndexToU64(1) | squareIndexToU64(6));
+    this->bitboard[BLACK_KNIGHT] |= (squareIndexToU64(57) | squareIndexToU64(62));
+}
+
+void Chessboard::initBishops(){
+    this->bitboard[WHITE_BISHOP] |= (squareIndexToU64(2) | squareIndexToU64(5));
+    this->bitboard[BLACK_BISHOP] |= (squareIndexToU64(58) | squareIndexToU64(61));
+}
+
+void Chessboard::initRooks(){
+    this->bitboard[WHITE_ROOK] |= (squareIndexToU64(0) | squareIndexToU64(7));
+    this->bitboard[BLACK_ROOK] |= (squareIndexToU64(56) | squareIndexToU64(63));
+}
+
+void Chessboard::initQueens(){
+    this->bitboard[WHITE_QUEEN] |= squareIndexToU64(3);
+    this->bitboard[BLACK_QUEEN] |= squareIndexToU64(59);
+}
+
+void Chessboard::initKings(){
+    this->bitboard[WHITE_KING] |= squareIndexToU64(4);
+    this->bitboard[BLACK_KING] |= squareIndexToU64(60);
+}
+
+uint64_t Chessboard::getPieceBitboard(Piece piece){
+    return this->bitboard[piece];
+}
+
+uint64_t Chessboard::getPlayerBitboard(Player player){
+    const auto &pieces = player == WHITE ? WHITE_PIECES : BLACK_PIECES;
+    uint64_t result = 0;
+    for(auto it=pieces.beign(); it != pieces.end(); ++it){
+        result |= this->bitboard[it];
+    }
+    return result;
+}
+
+uint64_t Chessboard::getAllPiecesBitboard(){
+    uint64_t result = 0;
+    for(auto i=0; i < 12; i++){
+        result |= this->bitboard[i];
+    }
+    return result;
+}
+
+bool Chessboard::isPlayerInCheck(Player player){
+    
+    Player opponent = player == WHITE ? BLACK : WHITE;
+    
+}
+
+
+
+bool Cheessboard::isGameFinished(){
+    auto legal_moves = this->getPlayerLegalMoves(this->player_to_move);
+    if(legal_moves.size() > 0){
+        return false;
+    }
+    if(isPlayerInCheck(this->player_to_move())){
+        this->result = this->player_to_move == WHITE ? BLACK_WIN: WHITE_WIN;
+    }
+    else {
+        this->result = DRAW;
+    }
+    return true;
+}
+
+uint8_t Cheessboard::getPLayersKingSquare(Player player){
+    Piece king = player == WHITE ? WHITE_KING : BLACK_KING;
+    return getSquareIndexesFromBitboard(this->bitboard[king]).front();
+}
+
+bool Chessboard::isSquareAttackedByPlayer(Player player, uint8_t square){
+    Piece pawn = player == WHITE ? WHITE_PAWN : BLACK_PAWN;
+    Piece knight = player == WHITE ? WHITE_KNIGHT : BLACK_KNIGHT;
+    Piece bishop = player == WHITE ? WHITE_BISHOP : BLACK_BISHOP;
+    Piece rook = player == WHITE ? WHITE_ROOK: BLACK_ROOK;
+    Piece queen = player == WHITE ? WHITE_QUEEN : BLACK_QUEEN;
+    Piece king = player == WHITE ? WHITE_KING : BLACK_KING;
+    return this->isSquareAttackedBySomePlyersPawn(pawn, square) ||
+            this->isSquareAttackedBySomePlayersKnight(knight, square) ||
+            this->isSquareAttackedBySomePlayersBishop(bishop, square) ||
+            this->isSquareAttackedBySomePlayersRook(rook, square) ||
+            this->isSquareAttackedBySomePlayerQueen(queen, square) ||
+            this->isSquareAttackedByPlayersKing(king, square);
+}
+
+
+bool Chessboard::isSquareAttackedBySomePlayersPawns(Player player, uint8_t square){
+    const auto pawn = player == WHITE ? WHITE_PAWN : BLACK_PAWN;
+    const auto pawn_squares = getSquareIndexesFromBitboard(this->bitboard[pawn]);
+    for(auto it = pawn_squares.begin(); it != pawn_squares.end(); ++it){
+        if(doesPawnAttackSquare(player, *it, square)){
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
+
+
+bool Cheessboard::isSquareAttackedBySomePlayersKnights(Player player, uint8_t square){
+    const auto knight = player == WHITE ? WHITE_KNIGHT : BLACK_KNIGHT;
+    const auto knight_squares = getSquareIndexesFromBitboard(this->bitboard[knight]);
+    for(auto it = knight_squares.begin(); it != knight_squares.end(); ++it){
+        if(doesKnightAttackSquare(*it, square)){
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool Cheessboard::isSquareAttackedBySomePlayersBishops(Player player, uint8_t square){
+    const auto bishop = player == WHITE ? WHITE_BISHOP : BLACK_BISHOP;
+    const auto bishop_squares = getSquareIndexesFromBitboard(this->bitboard[bishop]);
+    for(auto it = bishop_squares.begin(); it != bishop_squares.end(); ++it){
+        if(doesBishopAttackSquare(*it, square)){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Cheessboard::isSquareAttackedBySomePlayersRooks(Player player, uint8_t square){
+    const auto rook = player == WHITE ? WHITE_ROOK : BLACK_ROOK;
+    const auto rook_squares = getSquareIndexesFromBitboard(this->bitboard[rook]);
+    for(auto it = rook_squares.begin(); it != rook_squares.end(); ++it){
+        if(doesRookAttackSquare(*it, square)){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Cheessboard::isSquareAttackedBySomePlayerQueens(Player player, uint8_t square){
+    const auto queen = player == WHITE ? WHITE_QUEEN : BLACK_QUEEN;
+    const auto queen_squares = getSquareIndexesFromBitboard(this->bitboard[queen]);
+    for(auto it = queen_squares.begin(); it != queen_squares.end(); ++it){
+        if(doesQueenAttackSquare(*it, square)){
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool Chessboard::isSquareAttackedByPlayersKing(Player player, uint8_t square){
+    auto king_square = this->getPlayersKingSquare(player);
+    return doesKingAttackSquare(king_square, square);
+}
+
+bool Cheessboard::doesPawnAttackSquare(Player player, uint8_t pawn_square, uint8_t target_square){
+    int8_t left_attacked_square_diff = player == WHITE ? 7 : -9;
+    int8_t right_attacked_square_diff = player == WHITE ? 9 : -7; 
+    return target_square == pawn_square + left_attacked_square_diff && pawn_square % 8 > 0 || 
+        target_square == pawn_square + right_attacked_square_diff && pawn_square % 8 < 7;   
+}
+
+
+bool Cheessboard::doesKnightAttackSquare(uint8_t knight_square, uint8_t target_square){
+    int8_t diff = target_square - knight_square;
+    uint8_t knight_rank = knight_square >> 3;
+    uint8_t knight_file = knight_square % 8;
+    return diff == 15 && knight_rank < 6 && knight_file > 0 ||
+        diff == 17 && knight_rank < 6 && knight_file < 7 ||
+        diff == 6 && knight_rank < 7 && knight_file > 1 ||
+        diff == 10 && knight_rank < 7 && knight_file < 6 ||
+        diff == -10 && knight_rank > 0 && knight_file > 1 ||
+        diff == -6 && knight_rank > 0 && knight_file < 6 ||
+        diff == -17 && knight_rank > 1 && knight_file > 0 ||
+        diff == -15 && knight_rank > 1 && knight_file < 7;
+}
+
+bool Cheessboard::doesBishopAttackSquare(uint8_t bishop_square, uint8_t target_square){
+    if(target_square - bishop_square % 7 != 0 && target_square - bishop_square != 9){
+        return false;
+    }
+    uint64_t all_pieces_bitboard = this->getAllPiecesBitboard();
+    auto occupied_squares = getSquareIndexesFromBitboard(all_pieces_bitboard);
+    uint8_t start = target_square > bishop_square ? bishop_square : target_square;
+    uint8_t end = square > bishop_square ? square : bishop_square;   
+    uint8_t current_file = start % 8;
+    uint8_t current_square = start;
+    if(end - start % 7 == 0){
+        current_square += 7;
+        if(current_file == 0){
+            return false;
+        }
+        current_file--;
+        while (current_file > 0 && current_square != end){
+            auto it = std::find(occupied_squares.begin(), occupied_squares.end(), current_square);
+            if(*it != occupied_squares.end()){
+                return false;
+            }
+            current_file--;
+            current_square += 7;
+        }
+        if(current_square == end){
+            return true;
+        }
+    } else{
+        current_square += 9;
+        if(current_file == 7){
+            return false;
+        }
+        current_file++;
+        while (current_file < 7 && current_square != end){
+            auto it = std::find(occupied_squares.begin(), occupied_squares.end(), current_square);
+            if(*it != occupied_squares.end()){
+                return false;
+            }
+            current_file++;
+            current_square += 9;
+        }
+        if(current_square == end){
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool Chessboard::doesRookAttackSquare(uint8_t rook_square, uint8_t target_square){
+    if(rook_square - target_square % 8 != 0 && rook_square >> 3 != target_square >> 3){
+        return false;
+    }
+    uint64_t all_pieces_bitboard = this->getAllPiecesBitboard();
+    auto occupied_squares = getSquareIndexesFromBitboard(all_pieces_bitboard);
+    uint8_t start = taarget_square > bishop_square ? bishop_square : target_square;
+    uint8_t end = target_square > bishop_square ? target_square : bishop_square;
+    if(end - start % 8 == 0){
+        for(auto current=start+8; current<end; current+=8){
+            auto it = std::find(occupied_squares.begin(), occupied_squares.end(), current);
+            if(*it != occupied_squares.end()){
+                return false;
+            }
+        }
+    } else {
+        for(auto current=start+1; current<end; ++current){
+            auto it = std::find(occupied_squares.begin(), occupied_squares.end(), current);
+            if(*it != occupied_squares.end()){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+
+bool Chessboard::doesQueenAttackSquare(uint8_t queen_square, uint8_t target_square){
+    return this->doesBishopAttackSquare(queen_square, target_square) ||
+            this->doesRookAttackSquare(queen_square, target_square);
+}
+
+
+bool Cheessboard::doesKingAttackSquare(uint8_t king_square, uint8_t target_square){
+    uint8_t king_file = king_square % 8;
+    int8_t diff = target_square - king_square;
+    return diff == 8 || diff == -8 ||
+            king_file > 0 && (diff == -9 || diff == 7) ||
+            king_file < 7 && (diff == -7 || diff == 9);
+}
+
+std::array<uint8_t, 8> Chessboard::getPlayerPiecesBitboard(Player player){
+    std::array<uint8_t, 8> bitboard = {};
+    const auto &pieces = player == WHITE ? WHITE_PIECES: BLACK_PIECES;
+    for(const auto p: pieces){
+        for(auto i = 0; i < 8; i++){
+            bitboard[i] |= this->bitboard[8*p + i];
+        }
+    }
+    return bitboard;
+}
+
+std::array<uint8_t, 8> Chessboard::getAllPiecesBitboard(){
+
+}
+
 void printChessboard(uint8_t *chessboard){
     for(int p = 0; p < 12; p++){
         std::cout<<"piece: "<<p<<std::endl;
@@ -1375,4 +1719,27 @@ std::vector<*Move> getBishopLegalMoves(uint8_t *chessboard, uint8_t player){
             }
 
     }
+}
+
+
+uint8_t u64ToSqureIndex(uint64_t bitboard){
+    uint8_t result = 0;
+    uint64_t current = bitboard;
+
+}
+
+
+std::vector<uint8_t> getSquareIndexesFromBitboard(uint64_t bitboard){
+    std::vector<uint8_t> result{};
+    uint8_t current_index;
+    for(current_index=0; current_index<64; ++current_index){
+        if(bitboard & (uint64_t)1 << current_index){
+            result.push_back(current_index);
+        }
+    }
+    return result;
+}
+
+uint64_t squareIndexToU64(uint8_t square_index){
+    return (uint64_t)1 << square_index;
 }
