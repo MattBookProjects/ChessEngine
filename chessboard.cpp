@@ -21,6 +21,10 @@ const Result WHITE_WIN = 1;
 const Result DRAW = 0;
 const Result BLACK_WIN = -1;
 
+
+const CastleSide SHORT_CASTLE = 0;
+const CastleSide LONG_CASTLE = 1; 
+
 const std::array<Piece, 6> WHITE_PIECES = {WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING};
 const std::array<Piece, 6> BLACK_PIECES = {BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING};
 
@@ -30,16 +34,14 @@ Chessboard::Chessboard
     enum Player player_to_move, 
     bool can_white_castle, 
     bool can_black_castle, 
-    int8_t white_enpassant, 
-    int8_t black_enpassant
+    int8_t enpassant
 )
 {
     this->bitboard = bitboard;
     this->player_to_move = player_to_move;
     this->can_white_castle = can_white_castle;
     this->can_black_castle = can_black_castle;
-    this->white_enpassant = white_enpassant;
-    this->black_enpassant = black_enpassant;
+    this->enpassant = enpassant;
     
 }
 
@@ -91,7 +93,7 @@ uint64_t Chessboard::getPieceBitboard(Piece piece){
     return this->bitboard[piece];
 }
 
-uint64_t Chessboard::getPlayerBitboard(Player player){
+uint64_t Chessboard::getPlayerPiecesBitboard(Player player){
     const auto &pieces = player == WHITE ? WHITE_PIECES : BLACK_PIECES;
     uint64_t result = 0;
     for(auto it=pieces.beign(); it != pieces.end(); ++it){
@@ -136,6 +138,15 @@ uint8_t Cheessboard::getPLayersKingSquare(Player player){
 }
 
 bool Chessboard::isSquareAttackedByPlayer(Player player, uint8_t square){
+    auto pieces = player == WHITE ? WHITE_PIECES : BLACK_PIECES;
+    for(auto it = pieces.begin(); it != pieces.end(); ++it){
+        if(this-?isSquareAttackByPiece(*it)){
+            return true;
+        }
+    }
+    return false;
+
+
     Piece pawn = player == WHITE ? WHITE_PAWN : BLACK_PAWN;
     Piece knight = player == WHITE ? WHITE_KNIGHT : BLACK_KNIGHT;
     Piece bishop = player == WHITE ? WHITE_BISHOP : BLACK_BISHOP;
@@ -151,73 +162,59 @@ bool Chessboard::isSquareAttackedByPlayer(Player player, uint8_t square){
 }
 
 
-bool Chessboard::isSquareAttackedBySomePlayersPawns(Player player, uint8_t square){
-    const auto pawn = player == WHITE ? WHITE_PAWN : BLACK_PAWN;
-    const auto pawn_squares = getSquareIndexesFromBitboard(this->bitboard[pawn]);
-    for(auto it = pawn_squares.begin(); it != pawn_squares.end(); ++it){
-        if(doesPawnAttackSquare(player, *it, square)){
+std::optional<Piece> Chessboard::getPlayerPieceOnSquare(Player player, uint8_t square){
+    const auto pieces = player == WHITE ? WHITE_PIECES : BLACK_PIECES;
+    for(const auto &piece : pieces){
+        const auto piece_bitboard = this->bitboard[(std::static_cast<std::size>(*piece))];
+        const auto piece_squares_indexes = getSquareIndexesFromBitboard(piece_bitboard);
+        const auto found = std::find(piece_squares_indexes.begin(), piece_squares_indexes.end(), square);
+        if(found != piece_squares.end()){
+            return *found;
+        }
+    }
+    return std::nullopt;
+}
+
+bool Chessboard::isSquareAttackedByPiece(Piece piece, uint8_t square){
+    const auto piece_squares = getSquareIndexesFromBitboard(this->bitboard[piece]);
+    for(auto it = piece_squares.begin(); it != pieces.end(); ++it){
+        if(doesPieceAttackSquare(piece, *it, square)){
             return true;
         }
+  
     }
     return false;
 }
 
 
 
+bool Chessboard::doesPieceAttackSquare(Piece piece, uint8_t piece_square, uint8_t target_square){
+    switch(piece){
+        case WHITE_PAWN:
+        case BLACK_PAWN:
+            return doesPawnAttackSquare(piece, piece_square, target_square);
+        case WHITE_KNIGHT:
+        case BLACK_KNIGHT:
+            return doesKnightAttackSquare(piece_square, target_square);
+        case WHITE_BISHOP:
+        case BLACK_BISHOP:
+            return doesBishopAttackSquare(piece_square, target_square);
+        case WHITE_ROOK:
+        case BLACK_ROOK:
+            return doesRookAttackSquare(piece_square, target_square);
+        case WHITE_QUEEN:
+        case BLACK_QUEEN:
+            return doesQueenAttackSquare(piece_square, target_square);
+        case WHITE_KING:
+        case BLACK_KING:
+            return doesKingAttackSquare(piece_square, target_square);
+        default:
+            return false;
 
-
-bool Cheessboard::isSquareAttackedBySomePlayersKnights(Player player, uint8_t square){
-    const auto knight = player == WHITE ? WHITE_KNIGHT : BLACK_KNIGHT;
-    const auto knight_squares = getSquareIndexesFromBitboard(this->bitboard[knight]);
-    for(auto it = knight_squares.begin(); it != knight_squares.end(); ++it){
-        if(doesKnightAttackSquare(*it, square)){
-            return true;
-        }
     }
-    return false;
 }
 
-
-bool Cheessboard::isSquareAttackedBySomePlayersBishops(Player player, uint8_t square){
-    const auto bishop = player == WHITE ? WHITE_BISHOP : BLACK_BISHOP;
-    const auto bishop_squares = getSquareIndexesFromBitboard(this->bitboard[bishop]);
-    for(auto it = bishop_squares.begin(); it != bishop_squares.end(); ++it){
-        if(doesBishopAttackSquare(*it, square)){
-            return true;
-        }
-    }
-    return false;
-}
-
-bool Cheessboard::isSquareAttackedBySomePlayersRooks(Player player, uint8_t square){
-    const auto rook = player == WHITE ? WHITE_ROOK : BLACK_ROOK;
-    const auto rook_squares = getSquareIndexesFromBitboard(this->bitboard[rook]);
-    for(auto it = rook_squares.begin(); it != rook_squares.end(); ++it){
-        if(doesRookAttackSquare(*it, square)){
-            return true;
-        }
-    }
-    return false;
-}
-
-bool Cheessboard::isSquareAttackedBySomePlayerQueens(Player player, uint8_t square){
-    const auto queen = player == WHITE ? WHITE_QUEEN : BLACK_QUEEN;
-    const auto queen_squares = getSquareIndexesFromBitboard(this->bitboard[queen]);
-    for(auto it = queen_squares.begin(); it != queen_squares.end(); ++it){
-        if(doesQueenAttackSquare(*it, square)){
-            return true;
-        }
-    }
-    return false;
-}
-
-
-bool Chessboard::isSquareAttackedByPlayersKing(Player player, uint8_t square){
-    auto king_square = this->getPlayersKingSquare(player);
-    return doesKingAttackSquare(king_square, square);
-}
-
-bool Cheessboard::doesPawnAttackSquare(Player player, uint8_t pawn_square, uint8_t target_square){
+bool Cheessboard::doesPawnAttackSquare(Pawn pawn, uint8_t pawn_square, uint8_t target_square){
     int8_t left_attacked_square_diff = player == WHITE ? 7 : -9;
     int8_t right_attacked_square_diff = player == WHITE ? 9 : -7; 
     return target_square == pawn_square + left_attacked_square_diff && pawn_square % 8 > 0 || 
@@ -329,19 +326,8 @@ bool Cheessboard::doesKingAttackSquare(uint8_t king_square, uint8_t target_squar
             king_file < 7 && (diff == -7 || diff == 9);
 }
 
-std::array<uint8_t, 8> Chessboard::getPlayerPiecesBitboard(Player player){
-    std::array<uint8_t, 8> bitboard = {};
-    const auto &pieces = player == WHITE ? WHITE_PIECES: BLACK_PIECES;
-    for(const auto p: pieces){
-        for(auto i = 0; i < 8; i++){
-            bitboard[i] |= this->bitboard[8*p + i];
-        }
-    }
-    return bitboard;
-}
-
-std::array<uint8_t, 8> Chessboard::getAllPiecesBitboard(){
-
+Chessboard Chessboard::makeMove(std::shared_ptr<Move> move){
+    return move->applyMove(*this);
 }
 
 void printChessboard(uint8_t *chessboard){
@@ -355,13 +341,189 @@ void printChessboard(uint8_t *chessboard){
     
 }
 
+std::vector<std::unique_ptr<Move>> getPlayerLegalMoves(Player player){
+    std::vector<std::unique_ptr<Move>> potential_moves{};
+
+}
+
+std::vector<std::unique_ptr<Move>> getPlayerLegalPawnMoves(Player player){
+    const auto pawn = player == WHITE ? WHITE_PAWN : BLACK_PAWN;
+    const auto pawn_squares = getSquareIndexesFromBitboard(this->bitboard[pawn]);
+    std::vector<std::unique_ptr<Move>> legal_moves{};
+    for(auto it = pawn_squares.begin(); it != pawn_squares.end(); ++it){
+        auto pawn_legal_moves = this->getPawnLegalMove(player, pawn, *it);
+        legal_moves.insert(legal_moves.end(), pawn_legal_moves.begin(), pawn_legal_moves.end());  
+    }
+    return legal_moves;     
+}
+
+
+std::vector<std::unique_ptr<Move>> getPlayerLegalPieceMoves(Player player, Piece piece){
+    const auto piece_squares = getSquareIndexesFromBitboard(this->bitboard[piece]);
+    std::vector<std::unique_ptr<Move>> legal_moves{};
+    for(auto it = piece_squares.begin(); it != piece_squares.end(); ++it){
+        auto pawn_legal_moves = this->getPieceLegalMoves(player, piece, *it);
+        legal_moves.insert(legal_moves.end(), pawn_legal_moves.begin(), pawn_legal_moves.end());  
+    }
+    return legal_moves;  
+}
+
+std::vector<std::unique_ptr<Move>> getPieceLegalMoves(Player player, Piece piece, uint8_t piece_square){
+    switch(piece){
+        case WHITE_PAWN:
+        case BLACK_PAWN:
+            return getPawnLegalMoves(player, piece, piece_square);
+        case WHITE_KNIGHT:
+        case BLACK_KNIGHT:
+            return getKnightLegalMoves(player, piece, piece_square);
+        case WHITE_BISHOP:
+        case BLACK_BISHOP:
+            return getBishopLegalMoves(player, piece, piece_square);
+        case WHITE_ROOK:
+        case BLACK_ROOK:
+            return getRookLegalMoves(player, piece, piece_square);
+        case WHITE_QUEEN:
+        case BLACK_QUEEN:
+            return getQueenLegalMoves(player, piece, piece_square);
+        case WHITE_KING:
+        case BLACK_KING:
+            return getKingLegalMoves(player, piece, piece_square);
+        //default:
+           // co tu zwrocic XD
+
+    }
+}
+
+std::vector<std::unique_ptr<Move>> getPawnLegalMoves(Player player, Piece pawn. uint8_t pawn_square){
+    const auto opponent = player == WHITE ? BLACK : WHITE;
+    std::vector<std::unique_ptr<Move>> legal_moves{};
+    const uint8_t pawn_rank = pawn_square >> 3;
+    const uint8_t pawn_file = pawn_square % 8;
+    const uint8_t penultimate_rank = player == WHITE ? 6 : 1; 
+    const int8_t diff_forward = PAWN == WHITE_PAWN ? 8 : -8;
+    const int8_t diff_left_attack = PAWN == WHITE_PAWN ? 7 : -9;
+    const int8_t diff_right_attack = PAWN == WHITE_PAWN ? 9 : -7;
+    const auto all_pieces_indexes = getSquareIndexesFromBitboard(this->getAllPiecesBitboard();)
+    const auto opponent_pieces_indexes = getSquareIndexesFromBitboard(this->getPlayerPiecesBitboard(opponent));
+    const auto piece_in_front = std::find(all_pieces_indexes.begin(); all_pieces_indexes.end(); pawn_square+diff_forward);
+    const auto left_attacked_piece = std::find(opponent_pieces_indexes.begin(), opponent_pieces_indexes.end(), pawn_square+left_attacked_square_diff);
+    const auto right_attacked_piece = std::find(opponent_pieces_indexes.begin(), opponent_pieces_indexes.end(), pawn_square+right_attacked_square_diff);
+    if(piece_in_front == all_pieces_index.end()){
+        auto move = std::unique_ptr<Move>(new BasicMove(pawn, pawn_square, pawn_square+diff_forward));
+        if(!this->isMoveLegal(move)){}
+        else if(pawn_rank == penultimate_rank){
+            auto legal_promotion_moves = getAllPromotionMoves();
+            legal_moves.insert(legal_moves.end(), legal_promotion_moves.start(), legal_promotion_moves.end());
+        } else {
+            legal_moves.push_back(move);
+        }    
+        
+    }
+    if(left_attacked_piece !== all_pieces_indexe.end()){
+        const auto attacked_piece = getPlayerPieceFromSquare(*left_attacked_piece);
+        if(attacked_piece.has_value()){
+            const auto move = std::unique_ptr<Move>(new TakeMove(pawn, pawn_square, *attacked_piece, pawn_square+left_attacked_square_diff));
+            if(!this->isMoveLegal(move)){}
+            else if(pawn_rank == penultimate_rank){
+                auto legal_promotion_moves = getAllPromotionMoves();
+        }
+            legal_moves.push_back(move);
+        }
+        }
+       
+    }
+    if(right_attacked_piece !== all_pieces_indexe.end()){
+        const auto attacked_piece = getPlayerPieceFromSquare(*right_attacked_piece);
+        if(!attacked_piece.has_value()){
+            break;
+        }
+        if(!this->isMoveLegal(move)){}
+        if(pawn_rank == penultimate_rank){
+            const std::unique_ptr<Move> move = std::make_unique<TakeWithPromotionMove>(player, pawn_file, attacked_piece, );
+        }
+        const auto move = std::unique_ptr<Move>(new TakeMove(pawn, pawn_square, *attacked_piece, pawn_square+left_attacked_square_diff));
+       
+            legal_moves.push_back(move);
+        }
+    }
+    return legal_moves;
+
+    const auto left_target = std::find(opponent_pieces_indexes.begin(), opponent_pieces_indexes.end(), pawn_square + diff_left_attack);
+    if(left_target != opponent_pieces_indexes.end()){
+        auto move = std::unique_ptr<Move>(new TakeMove(pawn, pawn_square, *left_target, pawn_square+diff_left_attack));
+    }
+
+    //std::unique_ptr<Move> move;
+        if(player == WHITE){
+        
+           
+        }
+        if(player == WHITE && pawn_rank == 6){
+            move = std::unique_ptr<Move>(new PromotionMove(player, pawn_square % 8, WHITE_KNIGHT));
+        }
+        
+    }
+    const auto can_take_left = std::find
+    (
+        opponent_pieces_indexes.begin(), 
+        opponent_pieces_indexes.end(),
+        pawn_square + diff_left_attack
+    ); 
+    if(can_go_forward == opponent_pieces_index.end()){
+        std::unique_ptr<Move> move;
+        if(player == WHITE && pawn_rank == 6){
+            auto legal_promotion_moves = getAllPromotionMoves()
+            legal_moves.insert(legal_moves.end())
+            move = std::unique_ptr<Move>(new PromotionMove(player, pawn_square % 8, WHITE_KNIGHT));
+        }
+        auto move = std::unique_ptr<Move>(new BasicMove(pawn, pawn_square, pawn_square+diff_forward));
+        if(this->isMoveLegal(move)){
+            legal_moves.push_back(move);
+        }
+    }
+    const auto can_take_right = std::find
+    (
+        opponent_pieces_bitboard.begin(), 
+        opponent_pieces_bitboard.end(),
+        pawn_square + diff_right_attack
+    );
+
+  
+
+    
+}
+
+std::vector<std::unique_ptr<Move>> getPlayerLegalKnightMoves(Player player){
+
+}
+
+std::vector<std::unique_ptr<Move>> getPlayerLegalBishopMoves(Player player);
+std::vector<std::unique_ptr<Move>> getPlayerLegalRookMoves(Player player);
+std::vector<std::unique_ptr<Move>> getPlayerLegalQueenMoves(Player player);
+std::vector<std::unique_ptr<Move>> getPlayerLegalKingMoves(Player player);
+
+std::vector<std::unique_ptr<Move>> getAllPromotionMoves(Player player, pawn_file){
+    std::vector<std::unique_ptr>> legal_moves{};
+    const std::array<Piece, 4> pieces_for_promotion = player == WHITE ? 
+    {WHITE_KNIGHT, WHITE_BISHOP,  WHITE_ROOK, WHITE_QUEEN} :
+    {BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN};
+
+    for(auto it = pieces_for_promotion.begin(); it != pieces_for_promotion.end(); ++it){
+        auto move = std::unique_ptr<Move>(new PromotionMove(player, pawn_file, *it));
+        if(isMoveLegal(move)){
+            legal_moves.push_back(move);
+        }
+        return legal_moves;
+    }
+}
+
 void printChessboardFancy(uint8_t *chessboard){
     const char *fancy_board[64];
     for(int i = 0; i < 64; i++){
         fancy_board[i] = "  ";
     } 
     const char *piece_symbols[] = {"wP", "wN", "wB", "wR", "wQ", "wK", "bP", "bN", "bB", "bR", "bQ", "bK"};
-   for(int i=0; i < 12; i++){
+    for(int i=0; i < 12; i++){
         for(int j=0; j<8; j++){
             if(chessboard[8*i+j] == 0){
                 continue;
@@ -599,790 +761,21 @@ std::vector<Move> Chessboard::getPawnLegalMoves(enum Player player, uint8_t pawn
 
 */
 
-uint8_t *Chessboard::initChessboard(){
-    uint8_t *chessboard = new uint8_t[8*12+3]{0};
-    Chessboard::initPawns(chessboard);
-    Chessboard::initKnights(chessboard);
-    Chessboard::initBishops(chessboard);
-    Chessboard::initRooks(chessboard);
-    Chessboard::initQueens(chessboard);
-    Chessboard::initKings(chessboard);
-    Chessboard::initFlags(chessboard);
-    return chessboard;
-}
 
-/*
-void Chessboard::initPawns(uint8_t *chessboad){
-    for(int i = 8; i < 16; i++){
-        chessboad[i*12 + WHITE_PAWN] = 1;
-        chessboad[(55-i)*12 + BLACK_PAWN] = 1;
-
-    }
-    return chessboad;
-}*/
-
-void Chessboard::initPawns(uint8_t *chessboard){
-    chessboard[WHITE_PAWN * 8 + 1] = 255;
-    chessboard[BLACK_PAWN * 8 + 6] = 255;
-}
-
-void Chessboard::initKnights(uint8_t *chessboard){
-    chessboard[WHITE_KNIGHT * 8] = 64 | 2;
-    chessboard[BLACK_KNIGHT * 8 + 7] = 64 | 2;
-}
-
-void Chessboard::initBishops(uint8_t *chessboard){
-    chessboard[WHITE_BISHOP * 8] = 32 | 4;
-    chessboard[BLACK_BISHOP * 8 + 7] = 32 | 4;
-}
-
-void Chessboard::initRooks(uint8_t *chessboard){
-    chessboard[WHITE_ROOK * 8] = 128 | 1;
-    chessboard[BLACK_ROOK * 8 + 7] = 128 | 1;
-}
-
-void Chessboard::initQueens(uint8_t *chessboard){
-    chessboard[WHITE_QUEEN * 8] = 8;
-    chessboard[BLACK_QUEEN * 8 + 7] = 8;
-}
-
-void Chessboard::initKings(uint8_t *chessboard){
-    chessboard[WHITE_KING * 8] = 16;
-    chessboard[BLACK_KING * 8 + 7] = 16;   
-}
-
-void Chessboard::initFlags(uint8_t *chessboard){
-    chessboard[8*12] = 15;
-}
-
-uint8_t *Move::makeMove(uint8_t *chessboard){
-    uint8_t *result = new uint8_t[8*12+3]{0};
-    std::memcpy(result, chessboard, 8*12+3);
-    uint8_t *move = this->constructMoveBitboard(chessboard);
-    array_xor(result, move, 8*12+3);
-    return result;
-}
-
-BasicMove::BasicMove(uint8_t piece, uint8_t old_square, uint8_t new_square){
-    this->old_square = old_square;
-    this->new_square = new_square;
-    this->piece = piece;
-    std::cout<<"old_square: "<<(int)this->old_square<<"\nnew_square: "<<(int)this->new_square<<"\n piece: "<<(int)this->piece<<std::endl;
-}
-
-uint8_t *BasicMove::constructMoveBitboard(uint8_t *chessboard){
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(move+8*12+1, chessboard+8*12+1, 2);
-    uint8_t old_square_rank = this->old_square >> 3;
-    uint8_t old_square_file = pow_uint8((uint8_t)2, (uint8_t)this->old_square & 7);
-    uint8_t new_square_rank = this->new_square >> 3;
-    uint8_t new_square_file = pow_uint8((uint8_t)2, (uint8_t)this->new_square & 7);
-    move[8*this->piece + old_square_rank] += old_square_file;
-    move[8*this->piece + new_square_rank] += new_square_file; 
-    move[8*12] = 128;
-    if(this->piece == WHITE_PAWN && this->new_square - this->old_square == 16){
-        move[8*12+1] = new_square_file;
-    }
-    else if(this->piece == BLACK_PAWN && this->old_square - this->new_square == 16){
-        move[8*12+2] = new_square_file;
-    }
-    return move;
-}
-
-
-/*
-uint8_t *BasicMove::makeMove(uint8_t *chessboard){
-    uint8_t *result = new uint8_t[8*12+3]{0};
-    uint8_t *move = this->constructMoveBitboard(chessboard);
-    array_xor(result, move, 8*12+3);
-    return result;
-    /*uint8_t *result = new uint8_t[8*12+3]{0};
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(result, chessboard, 8*12+3);
-    uint8_t old_square_rank = this->old_square >> 3;
-    std::cout<<"old_square_rank: "<<(int)old_square_rank<<std::endl;
-    uint8_t old_square_file = pow_uint8((uint8_t)2, (uint8_t)this->old_square & 7);
-    std::cout<<"old_square_file: "<<(int)old_square_file<<std::endl;
-    uint8_t new_square_rank = this->new_square >> 3;
-    std::cout<<"new_square_rank: "<<(int)new_square_rank<<std::endl;
-    uint8_t new_square_file = pow_uint8((uint8_t)2, (uint8_t)this->new_square & 7);
-    std::cout<<"new_square_file: "<<(int)new_square_file<<std::endl;
-    move[8*this->piece + old_square_rank] += old_square_file;
-    move[8*this->piece + new_square_rank] += new_square_file; 
-    move[8*12] = 128;
-    if(this->piece == WHITE_PAWN && this->new_square - this->old_square == 16){
-        move[8*12+1] = new_square_file;
-        move[8*12+2] = chessboard[8*12+2];
-    }
-    else if(this->piece == BLACK_PAWN && this->old_square - this->new_square == 16){
-        move[8*12+1] = chessboard[8*12+1];
-        move[8*12+2] = new_square_file;
-    }
-    else {
-       move[8*12+1] = chessboard[8*12+1];
-       move[8*12+2] = chessboard[8*12+2];
-    }
-    result[8*12] ^= move[8*12];
-    result[this->piece * 8 + old_square_rank] ^= move[this->piece * 8 + old_square_rank];
-    if(old_square_rank != new_square_rank){
-        result[this->piece * 8 + new_square_rank] ^= move[this->piece * 8 + new_square_rank];
-    }
-    delete move;
-    return result
-}*/
-
-
-TakeMove::TakeMove(uint8_t attacking_piece, uint8_t attacker_square, uint8_t target_piece, uint8_t target_square){
-    this->attacking_piece = attacking_piece;
-    this->attacker_square = attacker_square;
-    this->target_piece = target_piece;
-    this->target_square = target_square;
-}
-
-uint8_t *TakeMove::constructMoveBitboard(uint8_t *chessboard){
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(move+8*12+1, chessboard+8*12+1, 2);
-    uint8_t attacker_square_rank = this->attacker_square >> 3;
-    uint8_t attacker_square_file = pow_uint8((uint8_t)2, (uint8_t)this->attacker_square & 7);
-    uint8_t target_square_rank = this->target_square >> 3;
-    uint8_t target_square_file = pow_uint8((uint8_t)2, (uint8_t)this->target_square & 7);
-    move[8*this->attacking_piece + attacker_square_rank] += attacker_square_file;
-    move[8*this->attacking_piece + target_square_rank] += target_square_file;
-    move[8*this->target_piece + target_square_rank] += target_square_file;
-    move[8*12] = 128;
-    return move;
-}
-
-/*
-uint8_t *TakeMove::makeMove(uint8_t *chessboard){
-    uint8_t *result = new uint8_t[8*12+3]{0};
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(result, chessboard, 8*12+2);
-    uint8_t attacker_square_rank = this->attacker_square >> 3;
-    uint8_t attacker_square_file = pow_uint8((uint8_t)2, (uint8_t)this->attacker_square & 7);
-    uint8_t target_square_rank = this->target_square >> 3;
-    uint8_t target_square_file = pow_uint8((uint8_t)2, (uint8_t)this->target_square & 7);
-    move[8*this->attacking_piece + attacker_square_rank] += attacker_square_file;
-    move[8*this->attacking_piece + target_square_rank] += target_square_file;
-    move[8*this->target_piece + target_square_rank] += target_square_file;
-    move[8*12] = 128;
-    move[8*12+1] = chessboard[8*12+1];
-    move[8*12+2] = chessboard[8*12+2];
-    result[8*12] ^= move[8*12];
-    result[8*12+1] ^= move[8*12+1];
-    result[8*this->target_piece + target_square_rank] ^= move[8*this->target_piece + target_square_rank];
-    result[8*this->attacking_piece + attacker_square_rank] ^= move[8*this->attacking_piece + attacker_square_rank];
-    if(attacker_square_rank != target_square_rank){
-        result[8*this->attacking_piece + target_square_rank] ^= move[8*this->attacking_piece + target_square_rank];
-    }
-    delete move;
-    return result;
-}
-*/
-
-CastleMove::CastleMove(uint8_t player, uint8_t side){
-    this->player = player;
-    this->side = side;
-}
-
-uint8_t *CastleMove::constructMoveBitboard(uint8_t *chessboard){
-    //std::cout<<"CastleMove::constructMoveBitboard start"<<std::endl;
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(move+8*12+1, chessboard+8*12+1, 2);
-    uint8_t rook_piece;
-    uint8_t king_piece; 
-    uint8_t rank;
-    uint8_t rook_rank_value;
-    uint8_t king_rank_value;
-    uint8_t player_castle_flag = this->player + 1;
-    if(this->player == WHITE){
-        rook_piece = WHITE_ROOK;
-        king_piece = WHITE_KING;
-        rank = 0;
-    } else {
-        rook_piece = BLACK_ROOK;
-        king_piece = BLACK_KING;
-        rank = 7;
-    }
-    if(this->side == SHORT_CASTLE){
-        rook_rank_value = 128 | 32;
-        king_rank_value = 16 | 64;
-    } else {
-        rook_rank_value = 1 | 8;
-        king_rank_value = 16 | 4;
-    }
-    move[8*rook_piece + rank] = rook_rank_value;
-    move[8*king_piece + rank] = king_rank_value;
-    move[8*12] = 128 + player_castle_flag;
-    //std::cout<<"CastleMove::constructMoveBitboard end"<<std::endl;
-    //printChessboard(move);
-    return move;
-}
-
-/*
-uint8_t *CastleMove::makeMove(uint8_t *chessboard){
-    uint8_t *result = new uint8_t[8*12+3]{0};
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(result, chessboard, 8*12+2);
-    uint8_t rook_piece;
-    uint8_t king_piece; 
-    uint8_t row_num;
-    uint8_t rook_row_value;
-    uint8_t king_row_value;
-    uint8_t player_castle_flag = this->player + 1;
-    if(this->player == WHITE){
-        rook_piece = WHITE_ROOK;
-        king_piece = WHITE_KING;
-        row_num = 0;
-    } else {
-        rook_piece = BLACK_ROOK;
-        king_piece = BLACK_KING;
-        row_num = 7;
-    }
-    if(this->side == SHORT_CASTLE){
-        rook_row_value = 128 | 32;
-        king_row_value = 16 | 64;
-    } else {
-        rook_row_value = 1 | 8;
-        king_row_value = 16 | 4;
-    }
-    move[8*rook_piece + row_num] = rook_row_value;
-    move[8*king_piece + row_num] = king_row_value;
-    move[8*12] = 128 + player_castle_flag;
-    move[8*12+1] = chessboard[8*12+1];
-    move[8*12+2] = chessboard[8*12+2];
-    result[8*rook_piece + row_num] ^= move[8*rook_piece + row_num];
-    result[8*king_piece + row_num] ^= move[8*king_piece + row_num];
-    result[8*12] ^= move[8*12];
-    delete move;
-    return result;
-}*/
-
-
-EnpassantMove::EnpassantMove(uint8_t player, uint8_t attacker_file, uint8_t target_file){
-    this->player = player;
-    this->attacker_file = attacker_file;
-    this->target_file = target_file;
-}
-
-/*
-uint8_t *EnpassantMove::makeMove(uint8_t *chessboard){
-    uint8_t *result = new uint8_t[8*12+3]{0};
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(result, chessboard, 8*12+3);
-    move[8*12] = 128;
-    move[8*12+1] = chessboard[8*12+1];
-    move[8*12+2] = chessboard[8*12+2];
-    result[8*12] ^= move[8*12];
-    result[8*12+1] ^= move[8*12+1];
-    result[8*12+2] ^= move[8*12+2];
-    if(this->player == WHITE){
-        move[8*WHITE_PAWN + 4] = pow_uint8((uint8_t)2, this->attacker_file);
-        move[8*WHITE_PAWN + 5] = pow_uint8((uint8_t)2, this->target_file);
-        move[8*BLACK_PAWN + 4] = pow_uint8((uint8_t)2, this->target_file);
-        result[8*WHITE_PAWN + 4] ^= move[8*WHITE_PAWN + 4];
-        result[8*WHITE_PAWN + 5] ^= move[8*WHITE_PAWN + 5];
-        result[8*BLACK_PAWN + 4] ^= move[8*BLACK_PAWN + 4];
-    } else{
-        move[8*BLACK_PAWN + 3] = pow_uint8((uint8_t)2, this->attacker_file);
-        move[8*BLACK_PAWN + 2] = pow_uint8((uint8_t)2, this->target_file);
-        move[8*WHITE_PAWN + 3] = pow_uint8((uint8_t)2, this->target_file);
-        result[8*BLACK_PAWN + 3] ^= move[8*BLACK_PAWN + 3];
-        result[8*BLACK_PAWN + 2] ^= move[8*BLACK_PAWN + 2];
-        result[8*WHITE_PAWN + 3] ^= move[8*WHITE_PAWN + 3];
-    }
-    delete move;
-    return result;
-}*/
-
-uint8_t *EnpassantMove::constructMoveBitboard(uint8_t *chessboard){
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(move+8*12+1, chessboard+8*12+1, 2);
-    move[8*12] = 128;
-    uint8_t attacker_file_value = pow_uint8((uint8_t)2, this->attacker_file);
-    uint8_t target_file_value = pow_uint8((uint8_t)2, this->target_file);
-    if(this->player == WHITE){
-        move[8*WHITE_PAWN + 4] = attacker_file_value;
-        move[8*WHITE_PAWN + 5] = target_file_value;
-        move[8*BLACK_PAWN + 4] = target_file_value;
-    } else{
-        move[8*BLACK_PAWN + 3] = attacker_file_value;
-        move[8*BLACK_PAWN + 2] = target_file_value;
-        move[8*WHITE_PAWN + 3] = target_file_value;
-    }
-    std::cout<<"ENPASSANT MOVE BITBOARD:"<<std::endl;
-    printChessboard(move);
-    return move;
-}
-
-TakeWithPromotionMove::TakeWithPromotionMove(uint8_t attacking_pawn, uint8_t attacker_file, uint8_t target_piece, uint8_t target_file, uint8_t promoted_piece){
-    this->attacking_pawn = attacking_pawn;
-    this->attacker_file = attacker_file;
-    this->target_piece = target_piece;
-    this->target_file = target_file;
-    this->promoted_piece = promoted_piece;
-}
-
-/*
-uint8_t *TakeWithPromotionMove::makeMove(uint8_t *chessboad){
-    uint8_t *result = new uint8_t[8*12+3]{0};
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(result, chessboard, 8*12+3);
-    move[8*12] = 128;
-    move[8*12+1] = chessboard[8*12+1];
-    move[8*12+2] = chessboard[8*12+2];
-    result[8*12] ^= move[8*12];
-    result[8*12+1] ^= move[8*12+1];
-    result[8*12+2] ^= move[8*12+2];
-    uint8_t attacking_pawn;
-    uint8_t attacker_rank;
-    uint8_t target_rank;
-    if(attacking_player == WHITE){
-        attacker_rank = 6;
-        target_rank = 7;
-        attacking_pawn = WHITE_PAWN;
-    } else {
-        attacker_rank = 1;
-        target_rank = 0;
-        attacking_pawn = BLACK_PAWN;
-    }
-
-    move[8*this->attacking_pawn+attacker_rank] = pow_uint8((uint8_t)2, attacker_file);
-    move[8*this->target_piece+target_rank] = pow_uint8((uint8_t)2, target_file);
-    move[8*this->promoted_piece+target_rank] = pow_uint8((uint8_t)2. target_file);
-    result[8*this->attacking_pawn+attacker_rank] ^= move[8*this->attacking_pawn+attacker_rank];
-    result[8*this->target_piece+target_rank] ^= move[8*this->target_piece+target_rank];
-    result[8*this->promoted_piece+target_rank] ^= move[8*this->promoted_piece+target_rank];
-    delete move;
-    return result;
-}*/
-
-uint8_t *TakeWithPromotionMove::constructMoveBitboard(uint8_t *chessboard){
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(move+8*12+1, chessboard+8*12+1, 2);
-    move[8*12] = 128;
-    uint8_t attacker_rank;
-    uint8_t target_rank;
-    if(this->attacking_pawn == WHITE_PAWN){
-        attacker_rank = 6;
-        target_rank = 7;        
-    } else {
-        attacker_rank = 1;
-        target_rank = 0;
-    }
-    uint8_t attacker_file_value = pow_uint8((uint8_t)2, attacker_file);
-    uint8_t target_file_value = pow_uint8((uint8_t)2, target_file);
-    move[8*this->attacking_pawn+attacker_rank] = attacker_file_value;
-    move[8*this->target_piece+target_rank] = target_file_value;
-    move[8*this->promoted_piece+target_rank] = target_file_value;
-    return move;
-}
-
-PromotionMove::PromotionMove(uint8_t pawn, uint8_t file, uint8_t promoted_piece){
-    this->pawn = pawn;
-    this->file = file;
-    this->promoted_piece = promoted_piece;
-}
-
-uint8_t *PromotionMove::constructMoveBitboard(uint8_t *chessboard){
-    uint8_t *move = new uint8_t[8*12+3]{0};
-    std::memcpy(move+8*12+1, chessboard+8*12+1, 2);
-    move[8*12] + 128;
-    uint8_t file_value = pow_uint8((uint8_t)2, this->file);
-    uint8_t old_rank;
-    uint8_t new_rank;
-    if(this->pawn == WHITE_PAWN){
-        old_rank = 6;
-        new_rank = 7;
-    } else{
-        old_rank = 1;
-        new_rank = 0;
-    }
-    move[8*this->pawn+old_rank] = file_value;
-    move[8*this->promoted_piece+new_rank] = file_value;
-    return move; 
-}
+########################################################################################################33
 
 
 
-bool isPlayerInCheck(uint8_t *chessboard, uint8_t player){
-    uint8_t king_square = getKingSquare(chessboard, player);
-    uint8_t attacking_player = player + 1 % 2;
-    return isSquareAttackedByPlayer(chessboard, attacking_player, king_square);
-}
-
-uint8_t getKingSquare(uint8_t *chessboard, uint8_t player){
-    uint8_t king;
-    if(player == WHITE){
-        king = WHITE_KING;
-    }else {
-        king = BLACK_KING;
-    }
-    for(int i = 0; i < 8; i++){
-        uint8_t rank_value = chessboard[8*king+i];
-        if(rank_value == 0){
-            continue;
-        }
-        for(int j = 7; j >= 0; j++){
-            uint8_t pow = pow_uint8((uint8_t)2, (uint8_t)j);
-            if(rank_value != pow){
-                continue;
-            }
-            return 8*i + j;
-        }
-    }
-}
-
-
-bool isSquareAttackedByPlayer(uint8_t *chessboard, uint8_t player, uint8_t square){
-    uint8_t pawn;
-    uint8_t knight;
-    uint8_t bishop;
-    uint8_t rook;
-    uint8_t queen;
-    uint8_t king;
-    if(player == WHITE){
-        pawn = WHITE_PAWN;
-        knight = WHITE_KNIGHT;
-        bishop = WHITE_BISHOP;
-        rook = WHITE_ROOK;
-        queen = WHITE_QUEEN;
-        king = WHITE_KING;
-    } else {
-        pawn = BLACK_PAWN;
-        knight = BLACK_KNIGHT;
-        bishop = BLACK_BISHOP;
-        rook = BLACK_ROOK;
-        queen = BLACK_QUEEN;
-        king = BLACK_KING;
-    }
-
-    return isSquareAttackedByPawn(chessboard, pawn, square)
-        || isSquareAttackedByKnight(chessboard, knight, square)
-        || isSquareAttackedByBishop(chessboard, bishop, square)
-        || isSquareAttackedByRook(chessboard, rook, square)
-        || isSquareAttackedByQueen(chessboard, queen, square)
-        || isSquareAttackedByKing(chessboard, king, square);
-}
-
-
-bool isSquareAttackedByPawn(uint8_t *chessboard, uint8_t pawn, uint8_t square){
-    if(pawn == WHITE_PAWN){
-        for(int i=0; i<7; i++){
-            if(chessboard[8*pawn+i] == 0){
-                continue;
-            }
-            uint8_t rank_value = chessboard[8*pawn+i];
-            for(int j=7; j>=0; j--){
-                uint8_t pow = pow_uint8((uint8_t)2,(uint8_t)j);
-                if(rank_value < pow){
-                    continue;
-                }
-               // std::cout<<"current pow value: "<<(int)pow<<std::endl;
-                uint8_t pawn_square = 8*i + j;
-                uint8_t pawn_file = pawn_square % 8;
-                if(pawn_file > 0 && square == pawn_square + 7 
-                    || pawn_file < 7 && square == pawn_square + 9){
-                    return true;
-                }
-                rank_value -= pow;
-            }
-        }
-    }
-    else{
-        for(int i=7; i>0; i--){
-            if(chessboard[8*pawn+i] == 0){
-                continue;
-            }
-            uint8_t rank_value = chessboard[8*pawn+i];
-            for(int j=7; j>=0; j--){
-                uint8_t pow = pow_uint8((uint8_t)2,(uint8_t)j);
-                if(rank_value < pow){
-                    continue;
-                }
-                uint8_t pawn_square = 8*i + j;
-                uint8_t pawn_file = pawn_square % 8;
-              //  std::cout<<"pawn square: "<<(int)pawn_square<<"\n"<<"pawn file: "<<(int)pawn_file<<"\n"<<"pow: "<<(int)pow<<std::endl;
-                if(pawn_file < 7 && square == pawn_square - 7  
-                    || pawn_file > 0 && square == pawn_square - 9){
-                    return true;
-                }
-                rank_value -= pow;
-            }
-        
-        }
-    }
-    return false;    
-}
-
-bool isSquareAttackedByKnight(uint8_t *chessboard, uint8_t knight, uint8_t square){
-    for(int i=0; i<8; i++){
-        if(chessboard[8*knight+i] == 0){
-            continue;
-        }
-        uint8_t rank_value = chessboard[8*knight+i];
-        for(int j=7; j>=0; j--){
-            uint8_t pow = pow_uint8((uint8_t)2,(uint8_t)j);
-            if(rank_value < pow){
-                continue;
-            }
-            uint8_t knight_square = 8*i + j;
-            int8_t diff = square - knight_square;
-            uint8_t knight_square_file = knight_square % 8;
-            if( 
-                (diff == 17 || diff == -15) && knight_square_file < 7
-                || (diff == 15 || diff ==-17) && knight_square_file > 0
-                || (diff == 10 || diff == -6) && knight_square_file < 6
-                || (diff == 6 || diff == -10) && knight_square_file > 1
-                ){
-                    return true;
-                }
-                rank_value -= pow;
-            
-             
-        }
-    }
-    return false;
-}
-    
 
 
 
-bool isSquareAttackedByBishop(uint8_t *chessboard, uint8_t bishop, uint8_t square){
-    uint8_t *all_pieces_bitboard = getAllPiecesBitboard(chessboard);
-    for(int i=0; i<8; i++){
-        uint8_t rank_value = chessboard[8*bishop+i];
-        if(rank_value == 0){
-            continue;
-        }
-        for(int j=7; j>=0; j--){
-            uint8_t pow = pow_uint8((uint8_t)2,(uint8_t)j);
-            if(rank_value < pow){
-                continue;
-            }
-            uint8_t bishop_square = 8*i + j;
-            if(square - bishop_square % 7 == 0){
-                uint8_t start;
-                uint8_t end;
-                if(square > bishop_square){
-                    start = bishop_square;
-                    end = square;
-                }else{
-                    start = square;
-                    end = bishop_square;
-                }
-                uint8_t current_file = start % 8;
-                uint8_t current_square = start + 7;
-                uint8_t current_rank = start >> 3 + 1;
-                if(current_file == 0){
-                    rank_value -= pow;
-                    continue;
-                }
-                current_file--;
-                bool is_blocked = false;
-                while(current_file > 0 &&  current_square < end){
-                    if(all_pieces_bitboard[current_rank] & pow_uint8((uint8_t)2, current_file)){
-                        is_blocked = true;
-                        break;
-                    }
-                    current_file--;
-                    current_square+=7;
-                }
-                if(is_blocked){
-                    rank_value -= pow;
-                    continue;
-                }
-                if(current_square == square){
-                    return true;
-                } else{
-                    rank_value -= pow;
-                    continue;
-                }
-            }                    
-            else if(square - bishop_square % 9 == 0){
-                uint8_t start;
-                uint8_t end;
-                if(square > bishop_square){
-                    start = bishop_square;
-                    end = square;
-                }else{
-                    start = square;
-                    end = bishop_square;
-                }
-                uint8_t current_file = start % 8;
-                uint8_t current_square = start + 9;
-                uint8_t current_rank = start >> 3 + 1;
-                if(current_file == 7){
-                    rank_value -= pow;
-                    continue;
-                }
-                current_file++;
-                bool is_blocked = false;
-                while(current_file < 7 &&  current_square < end){
-                    if(all_pieces_bitboard[current_rank] & pow_uint8((uint8_t)2, current_file)){
-                        is_blocked = true;
-                        break;
-                    }
-                    current_file++;
-                    current_rank++;
-                    current_square+=9;
-                }
-                if(is_blocked){
-                    rank_value -= pow;
-                    continue;
-                }
-                if(current_square == square){
-                    return true;
-                } else{
-                    rank_value -= pow;
-                    continue;
-                }
-
-            }
-            rank_value -= pow;
-        }
-    }
-    return false;
-}
 
 
-bool isSquareAttackedByRook(uint8_t *chessboard, uint8_t rook, uint8_t square){
-    uint8_t *all_pieces_bitboard = getAllPiecesBitboard(chessboard);
-    for(int i=0; i<8; i++){
-        if(chessboard[8*rook+i] == 0){
-            continue;
-        }
-        uint8_t rank_value = chessboard[8*rook+i];
-        for(int j=7; j>=0; j--){
-            uint8_t pow = pow_uint8((uint8_t)2,(uint8_t)j);
-            if(rank_value < pow){
-                continue;
-            }
-            uint8_t rook_square = 8*i + j;
-            if(square - rook_square % 8 == 0){
-                uint8_t start;
-                uint8_t end;
-                if(square > rook_square){
-                    start = rook_square;
-                    end = square;
-                } else{
-                    start = square;
-                    end = rook_square;
-                }
-                uint8_t file = square % 8;
-                uint8_t current_rank = start >> 3 + 1;
-                uint8_t current_square = start + 8;
-                bool is_blocked = false;
-                while(current_square < end ){
-                    if(all_pieces_bitboard[current_rank] & pow_uint8((uint8_t)2, file)){
-                        is_blocked = true;
-                        break;
-                    }
-                    current_square += 8;
-                    current_rank++;
-                }
-                if(is_blocked){
-                    rank_value -= pow;
-                    continue;
-                }
-                return true;
-            } else if(square >> 3 == rook_square >> 3){
-                uint8_t start;
-                uint8_t end;
-                if(square > rook_square){
-                    start = rook_square;
-                    end = square;
-                } else{
-                    start = square;
-                    end = rook_square;
-                } 
-                uint8_t current_file = start % 8 + 1;
-                uint8_t rank = square >> 3;
-                uint8_t current_square = start + 1;
-                bool is_blocked = false;
-                while(current_square < end){
-                    if(all_pieces_bitboard[rank] & pow_uint8((uint8_t)2, current_file)){
-                        is_blocked = true;
-                        break;
-                    }
-                    current_file++;
-                    current_square++;
-                }
-                if(is_blocked){
-                    rank_value -= pow;
-                    continue;
-                }
-                return true;
-            }
-            rank_value -= pow;
-        }
-    }
-    return false;
-}
 
 
-bool isSquareAttackedByQueen(uint8_t *chessboard, uint8_t queen, uint8_t square){
-    return isSquareAttackedByBishop(chessboard, queen, square) || isSquareAttackedByRook(chessboard, queen, square);
-}
-
-bool isSquareAttackedByKing(uint8_t *chessboard, uint8_t king, uint8_t square){
-    for(int rank=0; rank<8; rank++){
-        uint8_t rank_value = chessboard[8*king + rank];
-        if(rank_value == 0){
-            continue;
-        }
-        for(int file=7; file>=0; file--){
-            if(rank_value != pow_uint8((uint8_t)2, (uint8_t)file)){
-                continue;
-            }
-            uint8_t king_square = 8*rank + file;
-            if(
-                king_square - square == 8 || king_square - square == -8 
-                || file > 0 && (king_square - square == 1 || king_square - square == 9 || king_square - square == -7)
-                || file < 7 && (king_square - square == -1 || king_square - square == 7 || king_square - square == -9)
-            ){
-                return true;
-            } else{
-                return false;
-            }
-        }
-    }
-    return false;
-}
-/*
-uint8_t *getPiecePseudoCoveredSquares(uint8_t *chessboard, uint8_t piece){
-
-}
-
-uint8_t *getPawnPseudoCoveredSquares(uint8_t *chessboard, uint8_t pawn){
-
-}
-
-uint8_t *getKnigthPseudoCoveredSquares(uint8_t *chessboard, uint8_t)
-*/
 
 
-uint8_t *getAllPiecesBitboard(uint8_t *chessboard){
-    uint8_t *bitboard = new uint8_t[8]{0};
-    for(int i = 0; i < 8; i++){
-        for(int j = 0; j < 12; j++){
-            bitboard[i] |= chessboard[j*8+i];
-        }   
-    }
-    return bitboard;
-}
 
-
-uint8_t *getPlayerPiecesBitboard(uint8_t *chessboard, uint8_t player){
-    uint8_t *bitboard = new uint8_t[8]{0};
-    uint8_t start = player * 6;
-    for(int i = 0; i <8; i++){
-        for(int j = start; j < start+6; j++){
-            bitboard[i] |= chessboard[j*8+i];
-        }
-    }
-    return bitboard;
-}
 
 bool isMoveLegal(uint8_t *chessboard, Move *move){
     uint8_t player = chessboard[96] & 128 ? BLACK: WHITE;
