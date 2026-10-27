@@ -39,10 +39,17 @@ class PieceMoveBehaviour{
             Player player,
             Piece piece,
             uint8_t square, 
-            std::unique_ptr<Chessboard> cheessboard
+            Chessboard &cheessboard
         ) = 0;
-        virtual bool doesPieceAttackSquare(std::unique_ptr<Chessboard> cheessboard, uint8_t piece_square, uint8_t target_square) = 0;
-  
+        virtual bool doesPieceAttackSquare(Chessboard &cheessboard, uint8_t piece_square, uint8_t target_square) = 0;
+        std::unique_ptr<Move> getLegalPieceToSquareMove
+        (
+            Player player,
+            Piece piece, 
+            uint8_t square, 
+            Chessboard &cheessboard,
+            uint8_t target_square
+        );
 };
 
 inline Piece getPlayerPawn(Player player);
@@ -66,9 +73,9 @@ class PawnMoveBehaviour: public PieceMoveBehaviour{
             Player player,
             Piece piece,
             uint8_t square,
-            std::unique_ptr<Chessboard> cheessboard 
+            Chessboard &cheessboard 
         ) override;
-        inline bool doesPieceAttackSquare(std::unique_ptr<Chessboard> cheessboard, uint8_t piece_square, uint8_t target_square) override;
+        inline bool doesPieceAttackSquare(Chessboard &cheessboard, uint8_t piece_square, uint8_t target_square) override;
     
 };
 
@@ -80,50 +87,66 @@ class KnightMoveBehaviour: public PieceMoveBehaviour{
             Player player,
             Piece piece,  
             uint8_t square, 
-            std::unique_ptr<Chessboard> cheessboard
+            Chessboard &cheessboard
         ) override;
-        inline bool doesPieceAttackSquare(std::unique_ptr<Chessboard> cheessboard, uint8_t piece_square, uint8_t target_square) override;
+        inline bool doesPieceAttackSquare(Chessboard &cheessboard, uint8_t piece_square, uint8_t target_square) override;
 };
 
 class BishopMoveBehaviour: public PieceMoveBehaviour{
+    private:
+        DiagonalMoveBehaviour diagonal_move_behaviour;
     public:
-        BishopMoveBehaviour();
+        BishopMoveBehaviour(DiagonalMoveBehaviour diagonal_move_behaviour);
         std::vector<std::unique_ptr<Move>> getLegalMoves
         (
             Player player,
             Piece piece,  
             uint8_t square, 
-            std::unique_ptr<Chessboard> cheessboard
+            Chessboard &cheessboard
         ) override;
-        bool doesPieceAttackSquare(std::unique_ptr<Chessboard> cheessboard, uint8_t piece_square, uint8_t target_square) override;
+        bool doesPieceAttackSquare(Chessboard &cheessboard, uint8_t piece_square, uint8_t target_square) override;
+        std::vector<std::unique_ptr<Move>> getLegalMovesFromDiagonal
+        (
+            Player player,
+            Piece piece,  
+            uint8_t square, 
+            Chessboard &cheessboard,
+            uint8_t file_step,
+            uint8_t rank_step
+        );
 };
 
 
 class RookMoveBehaviour: public PieceMoveBehaviour{
+    private:
+        StraightMoveBehaviour straight_move_behaviour;
     public:
-        RookMoveBehaviour();
+        RookMoveBehaviour(StraightMoveBehaviour straight_move_behaviour);
         std::vector<std::unique_ptr<Move>> getLegalMoves
         (
             Player player,
             Piece piece, 
             uint8_t square, 
-            std::unique_ptr<Chessboard> cheessboard
+            Chessboard &cheessboard
         ) override;
-        bool doesPieceAttackSquare(std::unique_ptr<Chessboard> cheessboard, uint8_t piece_square, uint8_t target_square) override;
+        bool doesPieceAttackSquare(Chessboard &cheessboard, uint8_t piece_square, uint8_t target_square) override;
 };
 
 
 class QueenMoveBehaviour: public PieceMoveBehaviour{
+    private:
+        StraightMoveBehaviour straight_move_behaviour;
+        DiagonalMoveBehaviour diagonal_move_behaviour;
     public:
-        QueenMoveBehaviour();
+        QueenMoveBehaviour(StraightMoveBehaviour straight_move_behaviour, DiagonalMoveBehaviour diagonal_move_behaviour);
         std::vector<std::unique_ptr<Move>> getLegalMoves
         (
             Player player,
             Piece piece, 
             uint8_t square, 
-            std::unique_ptr<Chessboard> cheessboard
+            Chessboard &cheessboard
         ) override;
-        bool doesPieceAttackSquare(std::unique_ptr<Chessboard> cheessboard, uint8_t piece_square, uint8_t target_square) override;
+        bool doesPieceAttackSquare(Chessboard &cheessboard, uint8_t piece_square, uint8_t target_square) override;
 };
 
 class KingMoveBehaviour: public PieceMoveBehaviour{
@@ -134,9 +157,10 @@ class KingMoveBehaviour: public PieceMoveBehaviour{
             Player player,
             Piece piece, 
             uint8_t square, 
-            std::unique_ptr<Chessboard> cheessboard
+            Chessboard &cheessboard
         ) override;
-        bool doesPieceAttackSquare(std::unique_ptr<Chessboard> cheessboard, uint8_t piece_square, uint8_t target_square) override;
+        bool doesPieceAttackSquare(Chessboard &cheessboard, uint8_t piece_square, uint8_t target_square) override;
+       
 };
 
 const PawnMoveBehaviour white_pawn_move_behaviour;
@@ -157,5 +181,47 @@ std::unique_ptr<PieceMoveBehaviour> queen_pawn_move_behaviour;
 std::unique_ptr<PieceMoveBehaviour> king_move_behaviour;
 */
 std::unique_ptr<PieceMoveBehaviour> getPieceMoveBehaviour(Piece piece);
+
+
+class LinearMoveBehaviour {
+    public:
+        virtual std::vector<std::unique_ptr<Move>> getLegalMovesOnLine(
+            Player player,
+            Piece piece, 
+            uint8_t square, 
+            Chessboard &cheessboard,
+            uint8_t file_step,
+            uint8_t rank_step
+        ) = 0;
+};
+
+class DiagonalMoveBehaviour{
+    public:
+        std::vector<std::unique_ptr<Move>> getLegalMovesOnDiagonal(
+            Player player,
+            Piece piece, 
+            uint8_t square, 
+            Chessboard &chessboard,
+            int8_t file_step,
+            int8_t rank_step,
+            PieceMoveBehaviour &piece_move_behaviour
+        );
+
+};
+
+
+class StraightMoveBehaviour{
+    public:
+        std::vector<std::unique_ptr<Move>> getLegalMovesOnStraight(
+            Player player,
+            Piece piece, 
+            uint8_t square, 
+            Chessboard &chessboard,
+            int8_t file_step,
+            int8_t rank_step,
+            PieceMoveBehaviour &piece_move_behaviour
+        );
+
+};
 
 #endif
