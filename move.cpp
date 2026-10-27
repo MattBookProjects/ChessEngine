@@ -1,6 +1,6 @@
 #include "move.hpp"
 
-Cheessboard Move::applyMove(Cheessboard chessboard){
+Chessboard Move::applyMove(Chessboard chessboard){
     auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
     for(auto i = 0; i < chessboard.bitboard.size(); ++i){
@@ -16,13 +16,13 @@ Cheessboard Move::applyMove(Cheessboard chessboard){
     );
 }
 
-BasicMove::BasicMove(uint8_t piece, uint8_t old_square, uint8_t new_square){
+BasicMove::BasicMove(Piece piece, uint8_t old_square, uint8_t new_square){
     this->piece = piece;
     this->old_square = old_square;
     this->new_square = new_square;
 }
 
-Chessboard BasicMove::applyMove(Cheessboard cheessboard){
+Chessboard BasicMove::applyMove(Chessboard chessboard){
     auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
     for(auto i = 0; i < chessboad.bitboard.size(); ++i){
@@ -71,13 +71,13 @@ CastleMove::CastleMove(Player player, CastleSide side){
     this->side = side;
 }
 
-Cheessboard CastleMove::applyMove(Cheessboard chessboard){
+Chessboard CastleMove::applyMove(Chessboard chessboard){
     auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
-    for(auto i = 0; i < cheessboard.bitboard.size(); ++i){
-        new_bitboard[i] = cheessboard.bitboard[i] ^ move_bitboard[i];
+    for(auto i = 0; i < chessboard.bitboard.size(); ++i){
+        new_bitboard[i] = chessboard.bitboard[i] ^ move_bitboard[i];
     }
-    Player player_to_move = cheessboard.player_to_move == WHITE ? BLACK : WHITE;
+    Player player_to_move = chessboard.player_to_move == WHITE ? BLACK : WHITE;
     bool can_white_castle = player == WHITE ? false : chessboard.can_white_castle;
     bool can_black_castle = player == BLACK ? false : chessboard.can_black_castle;
     return Chessboard(
@@ -140,7 +140,7 @@ uint64_t PromotionMove::constructMoveBitboard(){
 
 TakeWithPromotionMove::TakeWithPromotionMove
 (
-    Piece pawn 
+    Piece pawn, 
     uint8_t pawn_square, 
     Piece target_piece, 
     uint8_t target_square, 
@@ -162,3 +162,63 @@ uint64_t TakeWithPromotionMove::constructMoveBitboard(){
     return move_bitboard;
 }
 
+std::array<std::unique_ptr<Move>, 4> getPromotionMoves
+(
+    Player player, 
+    Piece pawn, 
+    uint8_t old_square, 
+    uint8_t new_square
+)
+{
+    std::array<std::unique_ptr<Move>, 4> moves{};
+    moves[0] = std::make_unique<PromotionMove>(pawn, old_square, new_square, getPlayerKnight(player));
+    moves[1] = std::make_unique<PromotionMove>(pawn, old_square, new_square, getPlayerBishop(player));
+    moves[2] = std::make_unique<PromotionMove>(pawn, old_square, new_square, getPlayerRook(player));
+    moves[3] = std::make_unique<PromotionMove>(pawn, old_square, new_square, getPlayerQueen(player));
+    return moves;
+}
+
+std::array<std::unique_ptr<Move>, 4> getTakeWithPromotionMoves
+(
+    Player player, 
+    Piece pawn, 
+    uint8_t pawn_square, 
+    Piece target_piece, 
+    uint8_t target_square
+)
+{
+    std::array<std::unique_ptr<Move>,4> moves{};
+    moves[0] = std::make_unique<TakeWithPromotionMove>
+    (
+        pawn, 
+        pawn_square, 
+        target_piece, 
+        target_square, 
+        getPlayerKnight(player)
+    );
+    moves[1] = std::make_unique<TakeWithPromotionMove>
+    (
+        pawn, 
+        pawn_square, 
+        target_piece, 
+        target_square, 
+        getPlayerBishop(player)
+    );
+    moves[2] = std::make_unique<TakeWithPromotionMove>
+    (
+        pawn, 
+        pawn_square, 
+        target_piece, 
+        target_square, 
+        getPlayerRook(player)
+    );
+    moves[3] = std::make_unique<TakeWithPromotionMove>
+    (
+        pawn, 
+        pawn_square, 
+        target_piece, 
+        target_square, 
+        getPlayerQueen(player)
+    );
+    return moves;
+}

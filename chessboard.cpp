@@ -1,37 +1,13 @@
 #include "chessboard.hpp"
 
 
-const Player WHITE = 0;
-const Player BLACK = 1;
-
-const Piece WHITE_PAWN = 0;
-const Piece WHITE_KNIGHT = 1;
-const Piece WHITE_BISHOP = 2;
-const Piece WHITE_ROOK = 3;
-const Piece WHITE_QUEEN = 4;
-const Piece WHITE_KING = 5;
-const Piece BLACK_PAWN = 6;
-const Piece BLACK_KNIGHT = 7;
-const Piece BLACK_BISHOP = 8;
-const Piece BLACK_ROOK = 9;
-const Piece BLACK_QUEEN = 10;
-const Piece BLACK_KING = 11;
-
-const Result WHITE_WIN = 1;
-const Result DRAW = 0;
-const Result BLACK_WIN = -1;
 
 
-const CastleSide SHORT_CASTLE = 0;
-const CastleSide LONG_CASTLE = 1; 
-
-const std::array<Piece, 6> WHITE_PIECES = {WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING};
-const std::array<Piece, 6> BLACK_PIECES = {BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING};
 
 Chessboard::Chessboard
 (
     std::array<uint64_t, 12> bitboard,
-    enum Player player_to_move, 
+    Player player_to_move, 
     bool can_white_castle, 
     bool can_black_castle, 
     int8_t enpassant
@@ -40,8 +16,9 @@ Chessboard::Chessboard
     this->bitboard = bitboard;
     this->player_to_move = player_to_move;
     this->can_white_castle = can_white_castle;
-    this->can_black_castle = can_black_castle;
+    this->can_black_castle= can_black_castle;
     this->enpassant = enpassant;
+    this->game_result = GameResult::Ongoing;
     
 }
 
@@ -58,46 +35,46 @@ Chessboard Chessboard::initChessboard(){
 }
 
 void Chessboard::initPawns(){
-    for(int i = 0; i < 8; i++){
-        this->bitboard[WHITE_PAWN] |= squareIndexToU64(8+i);
-        this->bitboard[BLACK_PAWN] != squareIndexToU64(56-i);
+    for(uint8_t i = 0; i < 8; i++){
+        this->bitboard[static_cast<std::size_t>(Piece::WhitePawn)] |= squareIndexToU64(8+i);
+        this->bitboard[static_cast<std::size_t>(Piece::BlackPawn)] |= squareIndexToU64(56-i);
     }
 }
 
 void Chessboard::initKnights(){
-    this->bitboard[WHITE_KNIGHT] |= (squareIndexToU64(1) | squareIndexToU64(6));
-    this->bitboard[BLACK_KNIGHT] |= (squareIndexToU64(57) | squareIndexToU64(62));
+    this->bitboard[static_cast<std::size_t>(Piece::WhiteKnight)] = (squareIndexToU64(1) | squareIndexToU64(6));
+    this->bitboard[static_cast<std::size_t>(Piece::BlackKnight)] = (squareIndexToU64(57) | squareIndexToU64(62));
 }
 
 void Chessboard::initBishops(){
-    this->bitboard[WHITE_BISHOP] |= (squareIndexToU64(2) | squareIndexToU64(5));
-    this->bitboard[BLACK_BISHOP] |= (squareIndexToU64(58) | squareIndexToU64(61));
+    this->bitboard[static_cast<std::size_t>(Piece::WhiteBishop)] = (squareIndexToU64(2) | squareIndexToU64(5));
+    this->bitboard[static_cast<std::size_t>(Piece::BlackBishop)] = (squareIndexToU64(58) | squareIndexToU64(61));
 }
 
 void Chessboard::initRooks(){
-    this->bitboard[WHITE_ROOK] |= (squareIndexToU64(0) | squareIndexToU64(7));
-    this->bitboard[BLACK_ROOK] |= (squareIndexToU64(56) | squareIndexToU64(63));
+    this->bitboard[static_cast<std::size_t>(Piece::WhiteRook)] = (squareIndexToU64(0) | squareIndexToU64(7));
+    this->bitboard[static_cast<std::size_t>(Piece::BlackRook)] = (squareIndexToU64(56) | squareIndexToU64(63));
 }
 
 void Chessboard::initQueens(){
-    this->bitboard[WHITE_QUEEN] |= squareIndexToU64(3);
-    this->bitboard[BLACK_QUEEN] |= squareIndexToU64(59);
+    this->bitboard[static_cast<std::size_t>(Piece::WhiteQueen)] = squareIndexToU64(3);
+    this->bitboard[static_cast<std::size_t>(Piece::BlackQueen)] = squareIndexToU64(59);
 }
 
 void Chessboard::initKings(){
-    this->bitboard[WHITE_KING] |= squareIndexToU64(4);
-    this->bitboard[BLACK_KING] |= squareIndexToU64(60);
+    this->bitboard[static_cast<std::size_t>(Piece::WhiteKing)] = squareIndexToU64(4);
+    this->bitboard[static_cast<std::size_t>(Piece::BlackKing)] = squareIndexToU64(60);
 }
 
 uint64_t Chessboard::getPieceBitboard(Piece piece){
-    return this->bitboard[piece];
+    return this->bitboard[static_cast<std::size_t>(piece)];
 }
 
 uint64_t Chessboard::getPlayerPiecesBitboard(Player player){
-    const auto &pieces = player == WHITE ? WHITE_PIECES : BLACK_PIECES;
+    const auto &pieces = getPlayerPieces(player);
     uint64_t result = 0;
-    for(auto it=pieces.beign(); it != pieces.end(); ++it){
-        result |= this->bitboard[it];
+    for(auto it=pieces.begin(); it != pieces.end(); ++it){
+        result |= this->bitboard[static_cast<std::size_t>(*it)];
     }
     return result;
 }
@@ -110,15 +87,98 @@ uint64_t Chessboard::getAllPiecesBitboard(){
     return result;
 }
 
+Piece Chessboard::getPlayerPieceFromSquare(Player player, uint8_t square){
+    const auto player_pieces = getPlayerPieces(player);
+    for(const auto &piece: player_pieces){
+        const auto piece_bitboard = this->bitboard[static_cast<std::size_t>(piece)];
+        const auto piece_squares_indexes = getSquareIndexesFromBitboard(piece_bitboard);
+        auto it = std::find(piece_squares_indexes.begin(), piece_squares_indexes.end(), square);
+        if(it != piece_squares_indexes.end()){
+            return piece;
+        }
+    }
+    return Piece::Empty;
+}
+
+GameResult Chessboard::getGameResult(){
+    return this->game_result;
+}
+
+int8_t Chessboard::getEnpassant(){
+    return this->enpassant;
+}
+
 bool Chessboard::isPlayerInCheck(Player player){
-    
-    Player opponent = player == WHITE ? BLACK : WHITE;
-    
+    const Player opponent = getOpponentPlayer(player);
+    const uint8_t player_king_square = this->getPlayerKingSquare(player);
+    return this->isSquareAttackedByPlayerPieces(opponent, player_king_square);
 }
 
 
+  bool Chessboard::isDiagonalBetweenSquaresEmpty(uint8_t start_square, uint8_t end_square, uint8_t step){
+    const uint64_t all_pieces_bitboard = this->getAllPiecesBitboard();
+    auto current_file  = start_square % 8 + 1;
+    auto current_rank = start_square >> 3 + 1;
+    const auto rank_step = 1;
+    const auto file_step = step - 8;
+    const auto last_file = file_step == 1 ? 7 : 0;
+    if(current_file == last_file || current_rank == 7){
+        return false;
+    }
+    current_file += file_step;
+    current_rank++;
+    auto current_square = start_square + step;
+    while(current_square < end_square && current_rank < 7 && current_file != last_file){
+        if(all_pieces_bitboard & squareIndexToBitboard(current_square) != 0){
+            return false;
+        }
+        current_rank++;
+        current_file += file_step;
+        current_square += step;
+    }
+    return current_square == end_square;
+  }
 
-bool Cheessboard::isGameFinished(){
+
+  bool Chessboard::isStraightBetweenSquaresEmpty(uint8_t start_square, uint8_t end_square, uint8_t step){
+        const uint64_t all_pieces_bitboard = this->getAllPiecesBitboard();
+        auto current_square = start_square;
+        auto current_file_or_rank = step == 1 ? start_square % 8 : start_square >> 3;
+        if(current_file_or_rank == 7){
+            return false;
+        }
+        current_file_or_rank++;
+        current_square++;
+        while(current_square < end_square && current_file_or_rank < 7){
+            if(all_pieces_bitboard & squareIndexToBitboard(current_square) != 0){
+                return false;
+            }
+            current_square+=step;
+            current_file_or_rank++;
+        }
+        return current_square == end_square;
+  }
+
+
+  /*
+  bool Chessboard::isRankBetweenSquaresEmpty(uint8_t start_square, uint8_t end_square){
+        const uint64_t all_pieces_bitboard = this->getAllPiecesBitboard();
+        auto current_square = start_square + 1;
+        auto current_file = start_square % 8;
+        if(current_file == 7){
+            return false;
+        }
+        current_file++;
+        while(current_square < end_square && current_file < 7){
+            if(all_pieces_bitboard & squareIndexToBitboard(current_square) != 0){
+                return false;
+            }
+        }
+
+  }*/
+
+/*
+bool Chessboard::isGameFinished(){
     auto legal_moves = this->getPlayerLegalMoves(this->player_to_move);
     if(legal_moves.size() > 0){
         return false;
@@ -130,23 +190,23 @@ bool Cheessboard::isGameFinished(){
         this->result = DRAW;
     }
     return true;
-}
+}*/
 
-uint8_t Cheessboard::getPLayersKingSquare(Player player){
-    Piece king = player == WHITE ? WHITE_KING : BLACK_KING;
+uint8_t Chessboard::getPlayerKingSquare(Player player){
+    const Piece king = player == Player::White ? Piece::WhiteKing : Piece::BlackKing;
     return getSquareIndexesFromBitboard(this->bitboard[king]).front();
 }
 
-bool Chessboard::isSquareAttackedByPlayer(Player player, uint8_t square){
-    auto pieces = player == WHITE ? WHITE_PIECES : BLACK_PIECES;
+bool Chessboard::isSquareAttackedByPlayerPieces(Player player, uint8_t square){
+    const auto pieces = getPlayerPieces(player);
     for(auto it = pieces.begin(); it != pieces.end(); ++it){
-        if(this-?isSquareAttackByPiece(*it)){
+        if(this->isSquareAttackedByPiece(*it, square)){
             return true;
         }
     }
     return false;
 
-
+/*
     Piece pawn = player == WHITE ? WHITE_PAWN : BLACK_PAWN;
     Piece knight = player == WHITE ? WHITE_KNIGHT : BLACK_KNIGHT;
     Piece bishop = player == WHITE ? WHITE_BISHOP : BLACK_BISHOP;
@@ -158,7 +218,7 @@ bool Chessboard::isSquareAttackedByPlayer(Player player, uint8_t square){
             this->isSquareAttackedBySomePlayersBishop(bishop, square) ||
             this->isSquareAttackedBySomePlayersRook(rook, square) ||
             this->isSquareAttackedBySomePlayerQueen(queen, square) ||
-            this->isSquareAttackedByPlayersKing(king, square);
+            this->isSquareAttackedByPlayersKing(king, square);*/
 }
 
 
@@ -176,17 +236,27 @@ std::optional<Piece> Chessboard::getPlayerPieceOnSquare(Player player, uint8_t s
 }
 
 bool Chessboard::isSquareAttackedByPiece(Piece piece, uint8_t square){
-    const auto piece_squares = getSquareIndexesFromBitboard(this->bitboard[piece]);
-    for(auto it = piece_squares.begin(); it != pieces.end(); ++it){
-        if(doesPieceAttackSquare(piece, *it, square)){
+    const auto piece_move_behaviour = getPieceMoveBehaviour(piece);
+    const auto piece_squares = getSquareIndexesFromBitboard(this->bitboard[static_cast<std::size_t>(piece)]);
+    for(auto it = piece_squares.begin(); it != piece_squares.end(); ++it){
+        if(piece_move_behaviour->doesPieceAttackSquare(*it, square)){
             return true;
         }
-  
     }
     return false;
 }
 
 
+bool Chessboard::isSquareOccupied(uint8_t square){
+    const uint64_t all_pieces_bitboard = this->getAllPiecesBitboard();
+    const uint64_t square_bitboard = squareIndexToBitboard(square);
+    if(all_pieces_bitboard & square_bitboard > 0){
+        return true;
+    }
+    return false;
+}
+
+/*
 
 bool Chessboard::doesPieceAttackSquare(Piece piece, uint8_t piece_square, uint8_t target_square){
     switch(piece){
@@ -324,10 +394,15 @@ bool Cheessboard::doesKingAttackSquare(uint8_t king_square, uint8_t target_squar
     return diff == 8 || diff == -8 ||
             king_file > 0 && (diff == -9 || diff == 7) ||
             king_file < 7 && (diff == -7 || diff == 9);
+}*/
+
+Chessboard Chessboard::makeMove(const std::unique_ptr<Move> &move){
+    return move->applyMove(*this);
 }
 
-Chessboard Chessboard::makeMove(std::shared_ptr<Move> move){
-    return move->applyMove(*this);
+bool Chessboard::isMoveLegal(const std::unique_ptr<Move> &move){
+    const auto chessboard_after_move = this->makeMove(move);
+
 }
 
 void printChessboard(uint8_t *chessboard){
@@ -341,11 +416,27 @@ void printChessboard(uint8_t *chessboard){
     
 }
 
-std::vector<std::unique_ptr<Move>> getPlayerLegalMoves(Player player){
-    std::vector<std::unique_ptr<Move>> potential_moves{};
-
+std::vector<std::unique_ptr<Move>> Chessboard::getPlayerLegalMoves(Player player){
+    std::vector<std::unique_ptr<Move>> legal_moves{};
+    const auto player_pieces = getPlayerPieces(player);
+    for(auto it=player_pieces.begin(); it != player_pieces.end(); ++it){
+        const auto piece_legal_moves = this->getPlayerPieceLegalMoves(player, *it);
+        legal_moves.insert(legal_moves.end(), piece_legal_moves.begin(), piece_legal_moves.end());
+    }
 }
 
+std::vector<std::unique_ptr<Move>> Chessboard::getPlayerPieceLegalMoves(Player player, Piece piece){
+    std::vector<std::unique_ptr<Move>> legal_moves{};
+    const std::unique_ptr<PieceMoveBehaviour> piece_move_behaviour = getPieceMoveBehaviour(piece);
+    const std::vector<uint8_t> piece_squares = getSquareIndexesFromBitboard(this->bitboard[static_cast<std::size_t>(piece)]);
+    for(const auto &square: piece_squares){
+        const auto piece_on_square_legal_moves = piece_move_behaviour->getLegalMoves(player, piece, square, std::make_unique<Chessboard>(this));
+        legal_moves.insert(legal_moves.end(), piece_on_square_legal_moves.begin(), piece_on_square_legal_moves.end());
+    }
+    return legal_moves;
+}
+
+/*
 std::vector<std::unique_ptr<Move>> getPlayerLegalPawnMoves(Player player){
     const auto pawn = player == WHITE ? WHITE_PAWN : BLACK_PAWN;
     const auto pawn_squares = getSquareIndexesFromBitboard(this->bitboard[pawn]);
@@ -780,7 +871,7 @@ std::vector<Move> Chessboard::getPawnLegalMoves(enum Player player, uint8_t pawn
 bool isMoveLegal(uint8_t *chessboard, Move *move){
     uint8_t player = chessboard[96] & 128 ? BLACK: WHITE;
     uint8_t *board_after_move = move->makeMove(chessboard);
-    return !isPlayerInCheck(board_after_move, player);
+    return !this->isPlayerInCheck(board_after_move, player);
 }
 
 

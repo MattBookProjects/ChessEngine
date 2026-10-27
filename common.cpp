@@ -1,6 +1,6 @@
 #include "common.hpp"
 
-uint64_t squareIndexToU64(uint8_t square_index){
+uint64_t squareIndexToBitboard(uint8_t square_index){
     return (uint64_t)1 << square_index;
 }
 
@@ -24,5 +24,5 @@ inline uint8_t getSquareFile(uint8_t square){
 }
 
 inline Player getOpponentPlayer(Player player){
-    return player == WHITE ? BLACK : WHITE;
+    return player == Player::White ? Player::Black : Player::White;
 }

@@ -1,13 +1,23 @@
 #ifndef MOVE_H
 #define MOVE_H
-#include <cinttypes>
-#include "common.hpp"
+#include <cstdint>
+#include <array>
+#include <memory>
+#include "piece.hpp"
 
-class Cheessboard;
+class Chessboard;
+enum class Player;
+enum class Piece;
+
+enum class CastleSide: uint8_t{
+    SHORT_CASTLE = 0,
+    LONG_CASTLE = 1
+};
+
 
 class Move{
     public:
-        Chessboard applyMove(Cheessboard chessboard);
+        Chessboard applyMove(Chessboard chessboard);
         virtual std::array<uint64_t, 12> constructMoveBitboard() = 0;
 };
 
@@ -19,7 +29,7 @@ class BasicMove:public Move{
     
     public:
         BasicMove(Piece piece, uint8_t old_square, uint8_t new_square);
-        Chessboard applyMove(Cheessboard Cheessboard) override;
+        Chessboard applyMove(Chessboard chessboard) override;
         std::array<uint64_t, 12> constructMoveBitboard() override;
 };
 
@@ -43,10 +53,16 @@ class TakeWithPromotionMove:public Move{
         uint8_t target_square;
         Piece promoted_piece;
     public:
-        TakeWithPromotionMove(Piece pawn, uint8_t old_square, Piece target_piece, uint8_t target_square, Piece promoted_piece);
+        TakeWithPromotionMove(
+            Piece pawn, 
+            uint8_t pawn_square, 
+            Piece target_piece, 
+            uint8_t target_square, 
+            Piece promoted_piece
+        );
         std::array<uint64_t, 12> constructMoveBitboard() override;
 
-    };
+};
 
 
 class CastleMove:public Move{
@@ -56,7 +72,7 @@ class CastleMove:public Move{
         
     public:
         CastleMove(uint8_t player, uint8_t side);
-        Cheessboard applyMove(Cheessboard chessboard) override;
+        //Cheessboard applyMove(Cheessboard chessboard) override;
         std::array<uint64_t, 12> constructMoveBitboard() override;
 };
 
@@ -80,12 +96,29 @@ class PromotionMove:public Move{
     private:
         Piece player;
         uint8_t old_square;
-        uint8_t new_square
+        uint8_t new_square;
         Piece promoted_piece;
     public:
         PromotionMove(Piece pawn, uint8_t old_square, uint8_t new_square, Piece promoted_piece);
         std::array<uint64_t, 12> constructMoveBitboard() override;
 };
 
+
+std::array<std::unique_ptr<Move>, 4> getPromotionMoves
+(
+    Player player, 
+    Piece pawn, 
+    uint8_t old_square, 
+    uint8_t new_square
+);
+
+std::array<std::unique_ptr<Move>, 4> getTakeWithPromotionMoves
+(
+    Player player, 
+    Piece pawn, 
+    uint8_t pawn_square, 
+    Piece target_piece, 
+    uint8_t target_square
+);
 
 #endif

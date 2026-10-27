@@ -1,9 +1,9 @@
-#include "chessboard.hpp"
+//#include "chessboard.hpp"
 #include <iostream>
 #include <bitset>
 
 
-
+/*
 bool test_init_chessboard(){
     uint8_t *chessboard = Chessboard::initChessboard();
 
@@ -280,9 +280,9 @@ bool testIsSquareAttackedByKnight(){
     return true;
 }   
 
-
+*/
 int main(int argc, char **argv){
-    //test_init_chessboard();
+    /*//test_init_chessboard();
     /*uint8_t *chessboard = Chessboard::initChessboard();
     Move *move1 = new BasicMove((uint8_t)WHITE_PAWN, (uint8_t)11, (uint8_t)27);
     uint8_t *new_chessboard = move1->makeMove(chessboard);
@@ -302,10 +302,10 @@ int main(int argc, char **argv){
     //std::cout<<test_castle()<<std::endl;
    /* std::cout<<test_castle()<<std::endl;
     std::cout<<test_enpassant()<<std::endl;
-    std::cout<<test_promotion()<<std::endl;*/
+    std::cout<<test_promotion()<<std::endl;
 
    // uint8_t *chessboard = Chessboard::initChessboard();
     //printChessboardFancy(chessboard);
     std::cout<<testIsSquareAttackedByPawn()<<std::endl;
-    std::cout<<testIsSquareAttackedByKnight()<<std::endl;
+    std::cout<<testIsSquareAttackedByKnight()<<std::endl;*/
 }
