@@ -17,7 +17,7 @@ enum class CastleSide: uint8_t{
 
 class Move{
     public:
-        Chessboard applyMove(Chessboard chessboard);
+        virtual Chessboard applyMove(Chessboard &chessboard);
         virtual std::array<uint64_t, 12> constructMoveBitboard() = 0;
 };
 
@@ -29,7 +29,7 @@ class BasicMove:public Move{
     
     public:
         BasicMove(Piece piece, uint8_t old_square, uint8_t new_square);
-        Chessboard applyMove(Chessboard chessboard) override;
+        Chessboard applyMove(Chessboard &chessboard) override;
         std::array<uint64_t, 12> constructMoveBitboard() override;
 };
 
@@ -68,11 +68,11 @@ class TakeWithPromotionMove:public Move{
 class CastleMove:public Move{
     private: 
         Player player;
-        uint8_t side;
+        CastleSide side;
         
     public:
         CastleMove(uint8_t player, uint8_t side);
-        //Cheessboard applyMove(Cheessboard chessboard) override;
+        Chessboard applyMove(Chessboard &chessboard) override;
         std::array<uint64_t, 12> constructMoveBitboard() override;
 };
 

@@ -1,12 +1,13 @@
 #include "move.hpp"
+#include "chessboard.cpp"
 
-Chessboard Move::applyMove(Chessboard chessboard){
+Chessboard Move::applyMove(Chessboard &chessboard){
     auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
-    for(auto i = 0; i < chessboard.bitboard.size(); ++i){
-        new_bitboard[i] = chessboard.bitboard[i] ^ move_bitboard[i]; 
+    for(auto i = 0; i < chessboard.getBitboard().size(); ++i){
+        new_bitboard[i] = chessboard.getBitboard()[i] ^ move_bitboard[i]; 
     }
-    auto player_to_move = chessboard.player_to_move == WHITE ? BLACK : WHITE;
+    auto player_to_move = chessboard.player_to_move == Player::White ? Player::Black : Player::White;
     return Chessboard(
         new_bitboard,
         player_to_move,
@@ -22,16 +23,16 @@ BasicMove::BasicMove(Piece piece, uint8_t old_square, uint8_t new_square){
     this->new_square = new_square;
 }
 
-Chessboard BasicMove::applyMove(Chessboard chessboard){
+Chessboard BasicMove::applyMove(Chessboard &chessboard){
     auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
-    for(auto i = 0; i < chessboad.bitboard.size(); ++i){
-        new_bitboard[i] = cheessboard.bitboard[i] ^ move_bitboard[i];
+    for(auto i = 0; i < chessboard.bitboard.size(); ++i){
+        new_bitboard[i] = chessboard.bitboard[i] ^ move_bitboard[i];
     }
-    Player player_to_move = cheessboard.player_to_move == WHITE ? BLACK : WHITE;
+    Player player_to_move = chessboard.player_to_move == Player::White ? Player::Black : Player::White;
     int8_t enpassant = -1;
-    if(this->piece == WHITE_PAWN && this->new_square - this->old_square == 16 ||
-        this->piece == BLACK_PAWN && this->old_square - this->new_square == 16){
+    if(this->piece == Piece::WhitePawn && this->new_square - this->old_square == 16 ||
+        this->piece == Piece::BlackPawn && this->old_square - this->new_square == 16){
             enpassant = this->old_square % 8;
         }
     return Chessboard(
@@ -71,7 +72,7 @@ CastleMove::CastleMove(Player player, CastleSide side){
     this->side = side;
 }
 
-Chessboard CastleMove::applyMove(Chessboard chessboard){
+Chessboard CastleMove::applyMove(Chessboard &chessboard){
     auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
     for(auto i = 0; i < chessboard.bitboard.size(); ++i){

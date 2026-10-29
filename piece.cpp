@@ -29,12 +29,13 @@ std::unique_ptr<PieceMoveBehaviour> queen_pawn_move_behaviour = std::make_unique
 std::unique_ptr<PieceMoveBehaviour> king_move_behaviour = std::make_unique<KingMoveBehaviour>();
 */
 
+
 const PawnMoveBehaviour white_pawn_move_behaviour = PawnMoveBehaviour(0, 6, 4, 1);
 const PawnMoveBehaviour black_pawn_move_behaviour = PawnMoveBehaviour(7, 1, 3, -1);
 const KnightMoveBehaviour knight_move_behaviour = KnightMoveBehaviour();
-const BishopMoveBehaviour bishop_move_behaviour = BishopMoveBehaviour();
-const RookMoveBehaviour rook_move_behaviour = RookMoveBehaviour();
-const QueenMoveBehaviour queen_move_behaviour = QueenMoveBehaviour();
+const BishopMoveBehaviour bishop_move_behaviour = BishopMoveBehaviour(DiagonalMoveBehaviour());
+const RookMoveBehaviour rook_move_behaviour = RookMoveBehaviour(StraightMoveBehaviour());
+const QueenMoveBehaviour queen_move_behaviour = QueenMoveBehaviour(StraightMoveBehaviour(), DiagonalMoveBehaviour());
 const KingMoveBehaviour king_move_behaviour = KingMoveBehaviour();
 
 
@@ -100,13 +101,14 @@ std::unique_ptr<Move> PieceMoveBehaviour::getLegalPieceToSquareMove
     uint8_t target_square
 )
 {
-    
+    const Player opponent = getOpponentPlayer(player);
     if(!chessboard.isSquareOccupied(target_square)){
         std::unique_ptr<Move> move = std::make_unique<BasicMove>(piece, square, target_square);
         if(chessboard.isMoveLegal(move)){
             return move;
         }
-    } else if((const Piece target_piece = chessboard.getPlayerPieceFromSquare(opponent, square)) != Piece::Empty){
+    } else if(const Piece target_piece = chessboard.getPlayerPieceFromSquare(opponent, square); 
+              target_piece != Piece::Empty){
         std::unique_ptr<Move> move = std::make_unique<TakeMove>(piece, square, target_piece, target_square);
         if(chessboard.isMoveLegal(move)){
             return move;
@@ -352,45 +354,45 @@ std::vector<std::unique_ptr<Move>> BishopMoveBehaviour::getLegalMoves
 )
 {
     std::vector<std::unique_ptr<Move>> legal_moves{};
-    const std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         1,
         1,
-        this
+        *this
     );
-    const std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         -1,
         1,
-        this
+        *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         1,
         -1,
-        this
+        *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         -1,
         -1,
-        this
+        *this
     );
     legal_moves.insert(legal_moves.end(), upper_right_diagonal_moves.begin(), upper_right_diagonal_moves.end());
     legal_moves.insert(legal_moves.end(), upper_left_diagonal_moves.begin(), upper_left_diagonal_moves.end());
@@ -437,40 +439,40 @@ std::vector<std::unique_ptr<Move>> RookMoveBehaviour::getLegalMoves
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         0,
         1,
-        this
+        *this
     );
     const std::vector<std::unique_ptr<Move>> straight_down_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         0,
         -1,
-        this
+        *this
     );
     const std::vector<std::unique_ptr<Move>> straight_right_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         1,
         0,
-        this
+        *this
     );
     const std::vector<std::unique_ptr<Move>> straight_left_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         -1,
         0,
-        this
+        *this
     );
     legal_moves.insert(legal_moves.end(), straight_up_moves.begin(), straight_up_moves.end());
     legal_moves.insert(legal_moves.end(), straight_down_moves.begin(), straight_down_moves.end());
@@ -505,45 +507,45 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
 )
 {
     std::vector<std::unique_ptr<Move>> legal_moves{};
-    const std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         1,
         1,
-        this
+        *this
     );
-    const std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         -1,
         1,
-        this
+        *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         1,
         -1,
-        this
+        *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLEgalMovesOnDiagonal
+    const std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         -1,
         -1,
-        this
+        *this
     );
 
 
@@ -552,40 +554,40 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         0,
         1,
-        this
+        *this
     );
     const std::vector<std::unique_ptr<Move>> straight_down_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         0,
         -1,
-        this
+        *this
     );
     const std::vector<std::unique_ptr<Move>> straight_right_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         1,
         0,
-        this
+        *this
     );
     const std::vector<std::unique_ptr<Move>> straight_left_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
         square,
-        &chessboard,
+        chessboard,
         -1,
         0,
-        this
+        *this
     );
     legal_moves.insert(legal_moves.end(), straight_up_moves.begin(), straight_up_moves.end());
     legal_moves.insert(legal_moves.end(), straight_down_moves.begin(), straight_down_moves.end());
