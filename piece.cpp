@@ -19,25 +19,6 @@ constexpr std::array<Piece, 6> BLACK_PIECES{
     Piece::BlackKing
 };
 
-/*
-std::unique_ptr<PieceMoveBehaviour> white_pawn_move_behaviour = std::make_unique<PawnMoveBehaviour>(0, 6, 1);
-std::unique_ptr<PieceMoveBehaviour> black_pawn_move_behaviour = std::make_unique<PawnMoveBehaviour>(7, 1, -1);
-std::unique_ptr<PieceMoveBehaviour> knight_move_behaviour = std::make_unique<KnightMoveBehaviour>();
-std::unique_ptr<PieceMoveBehaviour> bishop_move_behaviour = std::make_unique<BishopMoveBehaviour>();
-std::unique_ptr<PieceMoveBehaviour> rook_move_behaviour = std::make_unique<RookMoveBehaviour>();
-std::unique_ptr<PieceMoveBehaviour> queen_pawn_move_behaviour = std::make_unique<QueenMoveBehaviour>();
-std::unique_ptr<PieceMoveBehaviour> king_move_behaviour = std::make_unique<KingMoveBehaviour>();
-*/
-
-
-const PawnMoveBehaviour white_pawn_move_behaviour = PawnMoveBehaviour(0, 6, 4, 1);
-const PawnMoveBehaviour black_pawn_move_behaviour = PawnMoveBehaviour(7, 1, 3, -1);
-const KnightMoveBehaviour knight_move_behaviour = KnightMoveBehaviour();
-const BishopMoveBehaviour bishop_move_behaviour = BishopMoveBehaviour(DiagonalMoveBehaviour());
-const RookMoveBehaviour rook_move_behaviour = RookMoveBehaviour(StraightMoveBehaviour());
-const QueenMoveBehaviour queen_move_behaviour = QueenMoveBehaviour(StraightMoveBehaviour(), DiagonalMoveBehaviour());
-const KingMoveBehaviour king_move_behaviour = KingMoveBehaviour();
-
 
 std::unique_ptr<PieceMoveBehaviour> getPieceMoveBehaviour(Piece piece){
     switch(piece){
@@ -340,7 +321,7 @@ inline bool KnightMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, u
 }
 
 
-BishopMoveBehaviour::BishopMoveBehaviour(DiagonalMoveBehaviour diagonal_move_behaviour){
+BishopMoveBehaviour::BishopMoveBehaviour(DiagonalMoveBehaviour &diagonal_move_behaviour){
     this->diagonal_move_behaviour = diagonal_move_behaviour;
 }
 
@@ -416,7 +397,7 @@ bool BishopMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t 
 
 
 
-RookMoveBehaviour::RookMoveBehaviour(StraightMoveBehaviour straight_move_behaviour){
+RookMoveBehaviour::RookMoveBehaviour(StraightMoveBehaviour &straight_move_behaviour){
     this->straight_move_behaviour = straight_move_behaviour;
 
 
@@ -493,7 +474,7 @@ bool RookMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t pi
     return chessboard.isStraightBetweenSquaresEmpty(start, end, step);
 }
 
-QueenMoveBehaviour::QueenMoveBehaviour(StraightMoveBehaviour straight_move_behaviour, DiagonalMoveBehaviour diagonal_move_behaviour){
+QueenMoveBehaviour::QueenMoveBehaviour(StraightMoveBehaviour &straight_move_behaviour, DiagonalMoveBehaviour &diagonal_move_behaviour){
     this->straight_move_behaviour = straight_move_behaviour;
     this->diagonal_move_behaviour = diagonal_move_behaviour;
 }

@@ -66,6 +66,9 @@ void Chessboard::initKings(){
     this->bitboard[static_cast<std::size_t>(Piece::BlackKing)] = squareIndexToU64(60);
 }
 
+
+statuc
+
 uint64_t Chessboard::getPieceBitboard(Piece piece){
     return this->bitboard[static_cast<std::size_t>(piece)];
 }
@@ -853,7 +856,6 @@ std::vector<Move> Chessboard::getPawnLegalMoves(enum Player player, uint8_t pawn
 */
 
 
-########################################################################################################33
 
 
 
@@ -880,7 +882,7 @@ std::vector<Move> getLegalMoves(uint8_t *chessboard){
 }
 
 
-
+/*
 std::vector<Move> getPlayersLegalPawnMoves(uint8_t *chessboard, uint8_t player){
     uint8_t opponent = player + 1 % 2;
     uint8_t pawn, knight, bishop, rook, queen, first_rank, penultimate_rank, last_rank, enpassant_rank;
@@ -1008,7 +1010,7 @@ std::vector<Move> getPlayersLegalPawnMoves(uint8_t *chessboard, uint8_t player){
     return legal_moves;
 }
    
-
+*/
 std::vector<Move> getLegalKnightMoves(uint8_t *chessboard, uint8_t player){
     std::vector<*Move> potential_moves = new std::vector<>();
     std::vector<*Move> legal_moves = new std::vector<>();

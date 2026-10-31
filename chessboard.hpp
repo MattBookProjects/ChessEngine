@@ -23,31 +23,7 @@ enum class GameResult: int8_t{
 };
 
 
-/*
-const Piece = WHITE_PAWN;
-const Piece = WHITE_KNIGHT;
-const Piece = WHITE_BISHOP;
-const Piece = WHITE_ROOK;
-const Piece = WHITE_QUEEN;
-const Piece = WHITE_KING
-const Piece = BLACK_PAWN;
-const Piece = BLACK_KNIGHT;
-const Piece = BLACK_BISHOP;
-const Piece = BLACK_ROOK;
-const Piece = BLACK_QUEEN;
-const Piece = BLACK_KING;
-
-const CastleSide SHORT_CASTLE;
-const CastleSide LONG_CASTLE; 
-
-const Result WHITE_WIN;
-const Result DRAW;
-const Result BLACK_WIN;
-const std::array<Piece, 6> WHITE_PIECES;
-const std::array<Piece, 6> BLACK_PIECES;
-*/
-
-enum class Piece;
+enum class Piece: uint8_t;
 
 
 class Chessboard{
@@ -59,13 +35,13 @@ class Chessboard{
         int8_t enpassant;
         //bool is_finished;
         GameResult game_result;
-        PawnMoveBehaviour white_pawn_move_behaviour;
-        PawnMoveBehaviour black_pawn_move_behaviour;
-        KnightMoveBehaviour knight_move_behaviour;
-        BishopMoveBehaviour bishop_move_behvaiour;
-        RookMoveBehaviour rook_move_behaviour;
-        QueenMoveBehaviour queen_move_behaviour;
-        KingMoveBehaviour king_move_behaviour;
+        PawnMoveBehaviour &white_pawn_move_behaviour;
+        PawnMoveBehaviour &black_pawn_move_behaviour;
+        KnightMoveBehaviour &knight_move_behaviour;
+        BishopMoveBehaviour &bishop_move_behvaiour;
+        RookMoveBehaviour &rook_move_behaviour;
+        QueenMoveBehaviour &queen_move_behaviour;
+        KingMoveBehaviour &king_move_behaviour;
 
     public:
         Chessboard(
@@ -86,6 +62,7 @@ class Chessboard{
         void initKings();
         //void initFlags();
 
+        std::array<uint64_t, 12> getBitboard();
         uint64_t getPieceBitboard(Piece piece);
         uint64_t getPlayerPiecesBitboard(Player player);
         uint64_t getAllPiecesBitboard();

@@ -27,8 +27,22 @@ enum class Piece: int8_t{
     BlackKing   = 11
 };
 
-constexpr std::array<Piece, 6> WHITE_PIECES;
-constexpr std::array<Piece, 6> BLACK_PIECES;
+constexpr std::array<Piece, 6> WHITE_PIECES = {
+    Piece::WhitePawn,
+    Piece::WhiteKnight,
+    Piece::WhiteBishop,
+    Piece::WhiteRook,
+    Piece::WhiteQueen,
+    Piece::WhiteKing
+};
+constexpr std::array<Piece, 6> BLACK_PIECES = {
+    Piece::BlackPawn,
+    Piece::BlackKnight,
+    Piece::BlackBishop,
+    Piece::BlackRook,
+    Piece::BlackQueen,
+    Piece::BlackKing
+};;
 
 inline std::array<Piece, 6> getPlayerPieces(Player player);
 
@@ -124,9 +138,9 @@ class KnightMoveBehaviour: public PieceMoveBehaviour{
 
 class BishopMoveBehaviour: public PieceMoveBehaviour{
     private:
-        DiagonalMoveBehaviour diagonal_move_behaviour;
+        DiagonalMoveBehaviour &diagonal_move_behaviour;
     public:
-        BishopMoveBehaviour(DiagonalMoveBehaviour diagonal_move_behaviour);
+        BishopMoveBehaviour(DiagonalMoveBehaviour &diagonal_move_behaviour);
         std::vector<std::unique_ptr<Move>> getLegalMoves
         (
             Player player,
@@ -149,9 +163,9 @@ class BishopMoveBehaviour: public PieceMoveBehaviour{
 
 class RookMoveBehaviour: public PieceMoveBehaviour{
     private:
-        StraightMoveBehaviour straight_move_behaviour;
+        StraightMoveBehaviour &straight_move_behaviour;
     public:
-        RookMoveBehaviour(StraightMoveBehaviour straight_move_behaviour);
+        RookMoveBehaviour(StraightMoveBehaviour &straight_move_behaviour);
         std::vector<std::unique_ptr<Move>> getLegalMoves
         (
             Player player,
@@ -165,10 +179,10 @@ class RookMoveBehaviour: public PieceMoveBehaviour{
 
 class QueenMoveBehaviour: public PieceMoveBehaviour{
     private:
-        StraightMoveBehaviour straight_move_behaviour;
-        DiagonalMoveBehaviour diagonal_move_behaviour;
+        StraightMoveBehaviour &straight_move_behaviour;
+        DiagonalMoveBehaviour &diagonal_move_behaviour;
     public:
-        QueenMoveBehaviour(StraightMoveBehaviour straight_move_behaviour, DiagonalMoveBehaviour diagonal_move_behaviour);
+        QueenMoveBehaviour(StraightMoveBehaviour &straight_move_behaviour, DiagonalMoveBehaviour &diagonal_move_behaviour);
         std::vector<std::unique_ptr<Move>> getLegalMoves
         (
             Player player,
@@ -193,10 +207,12 @@ class KingMoveBehaviour: public PieceMoveBehaviour{
        
 };
 
-const PawnMoveBehaviour white_pawn_move_behaviour;
-const PawnMoveBehaviour black_pawn_move_behaviour;
-const KnightMoveBehaviour knight_move_behaviour;
-const BishopMoveBehaviour bishop_move_behaviour;
+const DiagonalMoveBehaviour diagonal_move_behaviour();
+const StraightMoveBehaviour straight_move_behaviour();
+const PawnMoveBehaviour white_pawn_move_behaviour(0, 6, 4, 1);
+const PawnMoveBehaviour black_pawn_move_behaviour(7, 1, 3, -1);
+const KnightMoveBehaviour knight_move_behaviour();
+const BishopMoveBehaviour bishop_move_behaviour(&diagonal_move_behaviour);
 const RookMoveBehaviour rook_move_behaviour;
 const QueenMoveBehaviour queen_move_behaviour;
 const KingMoveBehaviour king_move_behaviour;

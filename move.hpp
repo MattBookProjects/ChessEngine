@@ -6,8 +6,8 @@
 #include "piece.hpp"
 
 class Chessboard;
-enum class Player;
-enum class Piece;
+enum class Player: uint8_t;
+enum class Piece: int8_t;
 
 enum class CastleSide: uint8_t{
     SHORT_CASTLE = 0,
@@ -94,7 +94,7 @@ class EnpassantMove:public Move{
 
 class PromotionMove:public Move{
     private:
-        Piece player;
+        Piece pawn;
         uint8_t old_square;
         uint8_t new_square;
         Piece promoted_piece;

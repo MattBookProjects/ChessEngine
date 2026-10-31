@@ -133,8 +133,8 @@ PromotionMove::PromotionMove(Piece pawn, uint8_t old_square, uint8_t new_square,
 
 uint64_t PromotionMove::constructMoveBitboard(){
     std::array<uint64_t, 12> move_bitboard{};
-    move_bitboard[this->pawn] = squareIndexToU64(this->old_square);
-    move_bitboard[this-?promoted_piece] = squareIndexToU64(this->new_square);
+    move_bitboard[static_cast<int8_t>(this->pawn)] = squareIndexToU64(this->old_square);
+    move_bitboard[static_cast<int8_t>(this->promoted_piece)] = squareIndexToU64(this->new_square);
     return move_bitboard;
 }
 
