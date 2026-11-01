@@ -3,7 +3,8 @@
 #include <cstdint>
 #include <array>
 #include <memory>
-#include "piece.hpp"
+#include "common.hpp"
+
 
 class Chessboard;
 enum class Player: uint8_t;
@@ -47,16 +48,16 @@ class TakeMove:public Move{
 
 class TakeWithPromotionMove:public Move{
     private:
-        Piece pawn;
-        uint8_t attacker_square;
+        Piece attacking_pawn;
+        uint8_t attacking_pawn_square;
         Piece target_piece;
         uint8_t target_square;
         Piece promoted_piece;
     public:
         TakeWithPromotionMove(
-            Piece pawn, 
+            Piece attacking_pawn, 
             uint8_t pawn_square, 
-            Piece target_piece, 
+            Piece attacking_target_piece, 
             uint8_t target_square, 
             Piece promoted_piece
         );
@@ -71,7 +72,7 @@ class CastleMove:public Move{
         CastleSide side;
         
     public:
-        CastleMove(uint8_t player, uint8_t side);
+        CastleMove(Player player, CastleSide side);
         Chessboard applyMove(Chessboard &chessboard) override;
         std::array<uint64_t, 12> constructMoveBitboard() override;
 };
@@ -80,7 +81,7 @@ class CastleMove:public Move{
 
 class EnpassantMove:public Move{
     private:
-        Piece pawn;
+        Piece attacking_pawn;
         uint8_t attacker_old_square;
         uint8_t attacker_new_square;
         Piece target_pawn;

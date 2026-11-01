@@ -1,18 +1,20 @@
 #ifndef CHESSBOARD_H
 #define CHESSBOARD_H
-#include <cinttypes>
+#include <cstdint>
 #include <cstring>
 #include <vector>
+#include <array>
 #include <iostream>
 #include <bitset>
 #include <optional>
 #include <memory>
 #include <algorithm>
+#include <cstdint>
 #include "utils.hpp"
 #include "common.hpp"
-#include "move.hpp"
-#include "piece.hpp"
 
+enum class Piece: int8_t;
+class Move;
 
 
 enum class GameResult: int8_t{
@@ -23,7 +25,7 @@ enum class GameResult: int8_t{
 };
 
 
-enum class Piece: uint8_t;
+
 
 
 class Chessboard{
@@ -35,22 +37,13 @@ class Chessboard{
         int8_t enpassant;
         //bool is_finished;
         GameResult game_result;
-        PawnMoveBehaviour &white_pawn_move_behaviour;
-        PawnMoveBehaviour &black_pawn_move_behaviour;
-        KnightMoveBehaviour &knight_move_behaviour;
-        BishopMoveBehaviour &bishop_move_behvaiour;
-        RookMoveBehaviour &rook_move_behaviour;
-        QueenMoveBehaviour &queen_move_behaviour;
-        KingMoveBehaviour &king_move_behaviour;
-
     public:
         Chessboard(
             std::array<uint64_t, 12> bitboard = {},
             Player player_to_move = Player::White,
             bool can_white_castle = true, 
             bool can_black_castle = true, 
-            int8_t white_enpassant = -1, 
-            int8_t black_enpassant = -1
+            int8_t enpassant = -1
         );
         static Chessboard initChessboard();
         //std::array<uint8_t, 96> getBitboard(); 
@@ -104,16 +97,20 @@ class Chessboard{
 
         bool isMoveLegal(const std::unique_ptr<Move> &move);
 
+        Player getPlayerToMove();
+        
+
+        Piece getPlayerPieceOnSquare(Player player, uint8_t square);
         std::vector<std::unique_ptr<Move>> getPlayerLegalMoves(Player player);
         std::vector<std::unique_ptr<Move>> getPlayerPieceLegalMoves(Player player, Piece piece);
 
 
-        std::vector<std::unique_ptr<Move>> getPlayerLegalPawnMoves(Player player);
+/*        std::vector<std::unique_ptr<Move>> getPlayerLegalPawnMoves(Player player);
         std::vector<std::unique_ptr<Move>> getPlayerLegalKnightMoves(Player player);
         std::vector<std::unique_ptr<Move>> getPlayerLegalBishopMoves(Player player);
         std::vector<std::unique_ptr<Move>> getPlayerLegalRookMoves(Player player);
         std::vector<std::unique_ptr<Move>> getPlayerLegalQueenMoves(Player player);
-        std::vector<std::unique_ptr<Move>> getPlayerLegalKingMoves(Player player);
+        std::vector<std::unique_ptr<Move>> getPlayerLegalKingMoves(Player player); */
 
         /*std::vector<std::unique_ptr<Move>> getPawnLegalMoves(Player player, Piece pawn, uint8_t pawn_square);
         std::vector<std::unique_ptr<Move>> getKnightLegalMoves(Player player, Piece knight, uint8_t knight_square);
@@ -126,6 +123,8 @@ class Chessboard{
     
         void printChessboard();
         void printChessboardFancy();
+        bool canWhiteCastle();
+        bool canBlackCastle();
 };
 
 

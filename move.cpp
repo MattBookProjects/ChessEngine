@@ -1,18 +1,21 @@
 #include "move.hpp"
-#include "chessboard.cpp"
+#include "chessboard.hpp"
+#include "piece.hpp"
+
 
 Chessboard Move::applyMove(Chessboard &chessboard){
+    const auto current_bitboard = chessboard.getBitboard();
     auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
-    for(auto i = 0; i < chessboard.getBitboard().size(); ++i){
-        new_bitboard[i] = chessboard.getBitboard()[i] ^ move_bitboard[i]; 
+    for(auto i = 0; i < current_bitboard.size(); ++i){
+        new_bitboard[i] = current_bitboard[i] ^ move_bitboard[i]; 
     }
-    auto player_to_move = chessboard.player_to_move == Player::White ? Player::Black : Player::White;
+    auto player_to_move = chessboard.getPlayerToMove() == Player::White ? Player::Black : Player::White;
     return Chessboard(
         new_bitboard,
         player_to_move,
-        chessboard.can_white_castle,
-        chessboard.can_black_castle,
+        chessboard.canWhiteCastle(),
+        chessboard.canBlackCastle(),
         -1
     );
 }
@@ -24,12 +27,13 @@ BasicMove::BasicMove(Piece piece, uint8_t old_square, uint8_t new_square){
 }
 
 Chessboard BasicMove::applyMove(Chessboard &chessboard){
-    auto move_bitboard = this->constructMoveBitboard();
+    const auto current_bitboard = chessboard.getBitboard();
+    const auto move_bitboard = this->constructMoveBitboard();
     std::array<uint64_t, 12> new_bitboard{};
-    for(auto i = 0; i < chessboard.bitboard.size(); ++i){
-        new_bitboard[i] = chessboard.bitboard[i] ^ move_bitboard[i];
+    for(auto i = 0; i < current_bitboard.size(); ++i){
+        new_bitboard[i] = current_bitboard[i] ^ move_bitboard[i];
     }
-    Player player_to_move = chessboard.player_to_move == Player::White ? Player::Black : Player::White;
+    Player player_to_move = chessboard.getPlayerToMove() == Player::White ? Player::Black : Player::White;
     int8_t enpassant = -1;
     if(this->piece == Piece::WhitePawn && this->new_square - this->old_square == 16 ||
         this->piece == Piece::BlackPawn && this->old_square - this->new_square == 16){
@@ -38,8 +42,8 @@ Chessboard BasicMove::applyMove(Chessboard &chessboard){
     return Chessboard(
         new_bitboard, 
         player_to_move, 
-        cheessboard.can_white_castle, 
-        cheessboard.can_black_castle, 
+        chessboard.canWhiteCastle(), 
+        chessboard.canBlackCastle(), 
         enpassant
     );
 }
@@ -47,12 +51,12 @@ Chessboard BasicMove::applyMove(Chessboard &chessboard){
 
 std::array<uint64_t, 12> BasicMove::constructMoveBitboard(){
     std::array<uint64_t, 12> move_bitboard{};
-    move_bitboard[piece] = squreIndexToU64(old_square) | squareIndexToU64(new_square);
+    move_bitboard[static_cast<uint8_t>(piece)] = squareIndexToBitboard(old_square) | squareIndexToBitboard(new_square);
     return move_bitboard;
 }
 
 
-TakeMove::TakeMove(uint8_t attacking_piece, uint8_t attacker_square, uint8_t target_piece, uint8_t target_square){
+TakeMove::TakeMove(Piece attacking_piece, uint8_t attacker_square, Piece target_piece, uint8_t target_square){
     this->attacking_piece = attacking_piece;
     this->attacker_square = attacker_square;
     this->target_piece = target_piece;
@@ -60,10 +64,10 @@ TakeMove::TakeMove(uint8_t attacking_piece, uint8_t attacker_square, uint8_t tar
 }
 
 
-uint64_t TakeMove::constructMoveBitboard(){
+std::array<uint64_t, 12> TakeMove::constructMoveBitboard(){
     std::array<uint64_t, 12> move_bitboard{};
-    move_bitboard[this->attacking_piece] = squareIndexToU64(this->attacker_square) | squareIndexToU64(this->target_square);
-    move_bitboard[this->target_piece] = squareIndexToU64(this->target_square);
+    move_bitboard[static_cast<uint8_t>(this->attacking_piece)] = squareIndexToBitboard(this->attacker_square) | squareIndexToBitboard(this->target_square);
+    move_bitboard[static_cast<uint8_t>(this->target_piece)] = squareIndexToBitboard(this->target_square);
     return move_bitboard;
 }
 
@@ -73,34 +77,35 @@ CastleMove::CastleMove(Player player, CastleSide side){
 }
 
 Chessboard CastleMove::applyMove(Chessboard &chessboard){
-    auto move_bitboard = this->constructMoveBitboard();
+    const auto move_bitboard = this->constructMoveBitboard();
+    const auto current_bitboard = chessboard.getBitboard();
     std::array<uint64_t, 12> new_bitboard{};
-    for(auto i = 0; i < chessboard.bitboard.size(); ++i){
-        new_bitboard[i] = chessboard.bitboard[i] ^ move_bitboard[i];
+    for(auto i = 0; i < current_bitboard.size(); ++i){
+        new_bitboard[i] = current_bitboard[i] ^ move_bitboard[i];
     }
-    Player player_to_move = chessboard.player_to_move == WHITE ? BLACK : WHITE;
-    bool can_white_castle = player == WHITE ? false : chessboard.can_white_castle;
-    bool can_black_castle = player == BLACK ? false : chessboard.can_black_castle;
+    Player player_to_move = chessboard.getPlayerToMove() == Player::White ? Player::Black : Player::White;
+    bool can_white_castle = player_to_move == Player::White ? false : chessboard.canWhiteCastle();
+    bool can_black_castle = player_to_move == Player::Black ? false : chessboard.canBlackCastle();
     return Chessboard(
         new_bitboard,
         player_to_move,
         can_white_castle,
         can_black_castle,
         -1
-    )
+    );
 }
 
-uint64_t CastleMove::constructMoveBitboard(){
+std::array<uint64_t,12> CastleMove::constructMoveBitboard(){
     std::array<uint64_t, 12> move_bitboard{};
-    auto rook = player == WHITE ? WHITE_ROOK : BLACK_ROOK;
-    auto king = player == WHITE ? WHITE_KING : BLACK_KING;
+    Piece rook = player == Player::White ? Piece::WhiteRook : Piece::BlackRook;
+    Piece king = player == Player::White ? Piece::WhiteKing : Piece::BlackKing;
     
-    if(side == SHORT_CASTLE){
-        move_bitboard[rook] = squareIndexToU64(7) | squareIndexToU64(5);
-        move_bitboard[king] = squareIndexToU64(4) | squareIndexToU64(6);
+    if(side == CastleSide::SHORT_CASTLE){
+        move_bitboard[static_cast<uint8_t>(rook)] = squareIndexToBitboard(7) | squareIndexToBitboard(5);
+        move_bitboard[static_cast<uint8_t>(king)] = squareIndexToBitboard(4) | squareIndexToBitboard(6);
     } else{
-        move_bitboard[rook] = squareIndexToU64(0) | squareIndexToU64(3);
-        move_bitboard[king] = squareIndexToU64(4) | squareIndexToU64(2);
+        move_bitboard[static_cast<uint8_t>(rook)] = squareIndexToBitboard(0) | squareIndexToBitboard(3);
+        move_bitboard[static_cast<uint8_t>(king)] = squareIndexToBitboard(4) | squareIndexToBitboard(2);
     }
     return move_bitboard;
 }
@@ -109,17 +114,17 @@ uint64_t CastleMove::constructMoveBitboard(){
 EnpassantMove::EnpassantMove(Piece attacking_pawn, uint8_t attacker_old_square, uint8_t attacker_new_square, Piece target_pawn, uint8_t target_square){
     this->attacking_pawn = attacking_pawn;
     this->attacker_old_square = attacker_old_square;
-    this->attacked_new_square = attacked_new_square;
+    this->attacker_new_square = attacker_new_square;
     this->target_pawn = target_pawn;
     this->target_square = target_square;
 }
 
 
 
-uint64_t EnpassantMove::constructMoveBitboard(){
+std::array<uint64_t,12> EnpassantMove::constructMoveBitboard(){
     std::array<uint64_t, 12> move_bitboard{};
-    move_bitboard[this->attacking_pawn] = squareIndexToU64(this->attacker_old_square) + squareIndexToU64(this->attacker_new_square);
-    move_bitboard[this->target_pawn] = squareIndexToU64(this->target_square);
+    move_bitboard[static_cast<uint8_t>(this->attacking_pawn)] = squareIndexToBitboard(this->attacker_old_square) + squareIndexToBitboard(this->attacker_new_square);
+    move_bitboard[static_cast<uint8_t>(this->target_pawn)] = squareIndexToBitboard(this->target_square);
     return move_bitboard;
 }
 
@@ -131,35 +136,35 @@ PromotionMove::PromotionMove(Piece pawn, uint8_t old_square, uint8_t new_square,
 }
 
 
-uint64_t PromotionMove::constructMoveBitboard(){
+std::array<uint64_t,12> PromotionMove::constructMoveBitboard(){
     std::array<uint64_t, 12> move_bitboard{};
-    move_bitboard[static_cast<int8_t>(this->pawn)] = squareIndexToU64(this->old_square);
-    move_bitboard[static_cast<int8_t>(this->promoted_piece)] = squareIndexToU64(this->new_square);
+    move_bitboard[static_cast<int8_t>(this->pawn)] = squareIndexToBitboard(this->old_square);
+    move_bitboard[static_cast<int8_t>(this->promoted_piece)] = squareIndexToBitboard(this->new_square);
     return move_bitboard;
 }
 
 
 TakeWithPromotionMove::TakeWithPromotionMove
 (
-    Piece pawn, 
-    uint8_t pawn_square, 
+    Piece attacking_pawn, 
+    uint8_t attacking_pawn_square, 
     Piece target_piece, 
     uint8_t target_square, 
     Piece promoted_piece
 ){
-    this->pawn = pawn;
-    this->pawn_square = pawn_square;
+    this->attacking_pawn = attacking_pawn;
+    this->attacking_pawn_square = attacking_pawn_square;
     this->target_piece = target_piece;
     this->target_square = target_square;
     this->promoted_piece = promoted_piece;
 }
 
 
-uint64_t TakeWithPromotionMove::constructMoveBitboard(){
+std::array<uint64_t,12> TakeWithPromotionMove::constructMoveBitboard(){
     std::array<uint64_t, 12> move_bitboard{};
-    move_bitboard[this->pawn] = squareIndexToU64(this->pawn_square);
-    move_bitboard[this->target_piece] = squareIndexToU64(this->target_square);
-    move_bitboard[this->promoted_piece] = squareIndexToU64(this->target_square);
+    move_bitboard[static_cast<uint8_t>(this->attacking_pawn)] = squareIndexToBitboard(this->attacking_pawn_square);
+    move_bitboard[static_cast<uint8_t>(this->target_piece)] = squareIndexToBitboard(this->target_square);
+    move_bitboard[static_cast<uint8_t>(this->promoted_piece)] = squareIndexToBitboard(this->target_square);
     return move_bitboard;
 }
 

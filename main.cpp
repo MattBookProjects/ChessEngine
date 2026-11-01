@@ -1,7 +1,9 @@
-//#include "chessboard.hpp"
+#include "chessboard.hpp"
+#include "move.hpp"
+#include "piece.hpp"
 #include <iostream>
 #include <bitset>
-
+#include "test_common.hpp"
 
 /*
 bool test_init_chessboard(){
@@ -282,6 +284,16 @@ bool testIsSquareAttackedByKnight(){
 
 */
 int main(int argc, char **argv){
+    std::cout<<"HI"<<std::endl;
+    auto chessboard = Chessboard::initChessboard();
+    chessboard.printChessboardFancy();
+    auto legal_moves = chessboard.getPlayerLegalMoves(Player::White);
+    std::printf("legal_moves: %i", legal_moves.size());
+
+
+    testSquareIndexToBitboard();
+
+
     /*//test_init_chessboard();
     /*uint8_t *chessboard = Chessboard::initChessboard();
     Move *move1 = new BasicMove((uint8_t)WHITE_PAWN, (uint8_t)11, (uint8_t)27);

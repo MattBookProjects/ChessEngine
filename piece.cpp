@@ -1,77 +1,49 @@
 #include "piece.hpp"
 #include "chessboard.hpp"
-
-constexpr std::array<Piece, 6> WHITE_PIECES = {
-    Piece::WhitePawn, 
-    Piece::WhiteKnight, 
-    Piece::WhiteBishop, 
-    Piece::WhiteRook,
-    Piece::WhiteQueen,
-    Piece::WhiteKing
-};
-
-constexpr std::array<Piece, 6> BLACK_PIECES{
-    Piece::BlackPawn, 
-    Piece::BlackKnight, 
-    Piece::BlackBishop, 
-    Piece::BlackRook,
-    Piece::BlackQueen,
-    Piece::BlackKing
-};
+#include "move.hpp"
 
 
-std::unique_ptr<PieceMoveBehaviour> getPieceMoveBehaviour(Piece piece){
+
+const DiagonalMoveBehaviour diagonal_move_behaviour{};
+const StraightMoveBehaviour straight_move_behaviour{};
+const PawnMoveBehaviour white_pawn_move_behaviour{0, 6, 4, 1};
+const PawnMoveBehaviour black_pawn_move_behaviour{7, 1, 3, -1};
+const KnightMoveBehaviour knight_move_behaviour{};
+const BishopMoveBehaviour bishop_move_behaviour{diagonal_move_behaviour};
+const RookMoveBehaviour rook_move_behaviour{straight_move_behaviour};
+const QueenMoveBehaviour queen_move_behaviour{straight_move_behaviour, diagonal_move_behaviour};
+const KingMoveBehaviour king_move_behaviour{};
+
+const PieceMoveBehaviour &getPieceMoveBehaviour(Piece piece){
     switch(piece){
         case Piece::WhitePawn:
-            return std::make_unique<PieceMoveBehaviour>(white_pawn_move_behaviour);
+            return white_pawn_move_behaviour;
         case Piece::BlackPawn:
-            return std::make_unique<PieceMoveBehaviour>(black_pawn_move_behaviour);
+            return black_pawn_move_behaviour;
         case Piece::WhiteKnight:
         case Piece::BlackKnight:
-            return std::make_unique<PieceMoveBehaviour>(knight_move_behaviour);
+            return knight_move_behaviour;
         case Piece::WhiteBishop:
         case Piece::BlackBishop:
-            return std::make_unique<PieceMoveBehaviour>(bishop_move_behaviour);
+            return bishop_move_behaviour;
         case Piece::WhiteRook:
         case Piece::BlackRook:
-            return std::make_unique<PieceMoveBehaviour>(rook_move_behaviour);
+            return rook_move_behaviour;
         case Piece::WhiteQueen:
         case Piece::BlackQueen:
-            return std::make_unique<PieceMoveBehaviour>(queen_move_behaviour);
+            return queen_move_behaviour;
         case Piece::WhiteKing:
         case Piece::BlackKing:
-            return std::make_unique<PieceMoveBehaviour>(king_move_behaviour);       
+            return king_move_behaviour;       
     }
 }
 
-
+/*
 inline std::array<Piece, 6> getPlayerPieces(Player player){
     return player == Player::White ? WHITE_PIECES : BLACK_PIECES;
-}
+}*/
 
-inline Piece getPlayerPawn(Player player){
-    return player == Player::White ? Piece::WhitePawn : Piece::BlackPawn;
-}
 
-inline Piece getPlayerKnight(Player player){
-    return player == Player::White ? Piece::WhiteKnight : Piece::BlackKnight;
-}
-
-inline Piece getPlayerBishop(Player player){
-    return player == Player::White ? Piece::WhiteBishop : Piece::BlackBishop;
-}
-
-inline Piece getPlayerRook(Player player){
-    return player == Player::White ? Piece::WhiteRook : Piece::BlackRook;
-}
-
-inline Piece getPlayerQueen(Player player){
-    return player == Player::White ? Piece::WhiteQueen : Piece::BlackQueen;
-}
-
-inline Piece getPlayerKing(Player player){
-    return player == Player::White ? Piece::WhiteKing : Piece::BlackKing;
-}
 
 std::unique_ptr<Move> PieceMoveBehaviour::getLegalPieceToSquareMove
 (
@@ -80,7 +52,7 @@ std::unique_ptr<Move> PieceMoveBehaviour::getLegalPieceToSquareMove
     uint8_t square, 
     Chessboard &chessboard,
     uint8_t target_square
-)
+) const
 {
     const Player opponent = getOpponentPlayer(player);
     if(!chessboard.isSquareOccupied(target_square)){
@@ -95,8 +67,9 @@ std::unique_ptr<Move> PieceMoveBehaviour::getLegalPieceToSquareMove
             return move;
         }
     }
+    std::printf("PieceMoveBehaviour::getLegalPieceToSquareMove RETURNING NULL");
     return nullptr;
-}
+} 
 
 PawnMoveBehaviour::PawnMoveBehaviour(uint8_t starting_rank, uint8_t penultimate_rank, uint8_t enpassant_rank, int8_t forward_move_step){
     this->starting_rank = starting_rank;
@@ -111,8 +84,9 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
     Piece piece,
     uint8_t square,
     Chessboard &chessboard
-)
+) const
 {
+   // std::printf("PawnMoveBehaviour::getLegalMoves\n");
     std::vector<std::unique_ptr<Move>> legal_moves{};
     const uint8_t square_rank = getSquareRank(square);
     const uint8_t square_file = getSquareFile(square);
@@ -121,26 +95,29 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
     const uint64_t opponent_pieces_bitboard = chessboard.getPlayerPiecesBitboard(player);
     const std::vector<uint8_t> all_pieces_square_indexes = getSquareIndexesFromBitboard(all_pieces_bitboard);
     const std::vector<uint8_t> opponent_pieces_square_indexes = getSquareIndexesFromBitboard(opponent_pieces_bitboard);
-
+    //std::cout<<"all pieces bitboard: "<<all_pieces_bitboard<<std::endl;
     const uint8_t forward_square = square + 8*this->forward_move_step;
-    if(!chessboard.isSquareOccupied(forward_square)){
+    //std::printf("square: %u, target_square: %u\n", square, forward_square);
+    //std::cout<<"all pieces squares indexes: " <<all_pieces_square_indexes<<std::endl;
+    if(!(chessboard.isSquareOccupied(forward_square))){
+       // std::printf("PawnMoveBehaviour::getLegalMoves SQUARE_NOT_OCCUPIED\n");
     /*auto is_forward_square_occupied = std::find(all_pieces_square_indexes.begin(), all_pieces_square_indexes.end(), forward_square);
     if(is_forward_square_occupied != all_pieces_square_indexes.end()){*/
-        const std::unique_ptr<Move> forward_move = std::make_unique<BasicMove>(piece, square, forward_square);
+        std::unique_ptr<Move> forward_move = std::make_unique<BasicMove>(piece, square, forward_square);
 
         if(!chessboard.isMoveLegal(forward_move)){
 
         } else if(square_rank == this->penultimate_rank){
-            const auto promotion_moves = getPromotionMoves(player, piece, square, forward_square);
-            legal_moves.insert(legal_moves.end(), promotion_moves.begin(), promotion_moves.end());
+            auto promotion_moves = getPromotionMoves(player, piece, square, forward_square);
+            legal_moves.insert(legal_moves.end(), std::make_move_iterator(promotion_moves.begin()), std::make_move_iterator(promotion_moves.end()));
         }  else {
-            legal_moves.push_back(forward_move);
+            legal_moves.push_back(std::move(forward_move));
         }
         if(square_rank == this->starting_rank){
             const uint8_t double_forward_square = square + 16*this->forward_move_step;
             if(!chessboard.isSquareOccupied(double_forward_square)){
-                const std::unique_ptr<Move> double_forward_move = std::make_unique<BasicMove>(piece, square, double_forward_square);
-                legal_moves.push_back(double_forward_move);
+                std::unique_ptr<Move> double_forward_move = std::make_unique<BasicMove>(piece, square, double_forward_square);
+                legal_moves.push_back(std::move(double_forward_move));
             } 
         }
     }
@@ -148,11 +125,11 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
         const uint8_t left_target_square = square -9 + (this->forward_move_step + 1)*8;
         const Piece target_piece = chessboard.getPlayerPieceFromSquare(opponent, left_target_square);
         if(target_piece != Piece::Empty){
-            const std::unique_ptr<Move> left_take_move = std::make_unique<TakeMove>(piece, square, target_piece, left_target_square);
+            std::unique_ptr<Move> left_take_move = std::make_unique<TakeMove>(piece, square, target_piece, left_target_square);
             if(!chessboard.isMoveLegal(left_take_move)){
 
             } else if(square_rank == this->penultimate_rank){
-                const auto left_take_with_promotion_moves = getTakeWithPromotionMoves
+                auto left_take_with_promotion_moves = getTakeWithPromotionMoves
                 (
                     player, 
                     piece, 
@@ -160,11 +137,16 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
                     target_piece, 
                     left_target_square
                 );
-                legal_moves.insert(legal_moves.end(), left_take_with_promotion_moves.begin(), left_take_with_promotion_moves.end());
+                legal_moves.insert
+                (
+                    legal_moves.end(), 
+                    std::make_move_iterator(left_take_with_promotion_moves.begin()), 
+                    std::make_move_iterator(left_take_with_promotion_moves.end())
+                );
 
                 //const std::unique_ptr<Move> left_take_with_promotion_move = std::make_unique<TakeWithPromotionMove()
             } else{
-                legal_moves.push_back(left_take_move);
+                legal_moves.push_back(std::move(left_take_move));
             }
         }
     } 
@@ -178,11 +160,11 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
         );
         const Piece target_piece = chessboard.getPlayerPieceFromSquare(opponent, right_target_square);
         if(target_piece != Piece::Empty){
-            const std::unique_ptr<Move> right_take_move = std::make_unique<TakeMove>(piece, square, target_piece, right_target_square);
+            std::unique_ptr<Move> right_take_move = std::make_unique<TakeMove>(piece, square, target_piece, right_target_square);
             if(!chessboard.isMoveLegal(right_take_move)){
 
             } else if(square_rank == this->penultimate_rank){
-                const auto right_take_with_promotion_moves = getTakeWithPromotionMoves
+                auto right_take_with_promotion_moves = getTakeWithPromotionMoves
                 (
                     player, 
                     piece, 
@@ -190,11 +172,15 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
                     target_piece, 
                     right_target_square
                 );
-                legal_moves.insert(legal_moves.end(), right_take_with_promotion_moves.begin(), right_take_with_promotion_moves.end());
+                legal_moves.insert(
+                    legal_moves.end(), 
+                    std::make_move_iterator(right_take_with_promotion_moves.begin()), 
+                    std::make_move_iterator(right_take_with_promotion_moves.end())
+                );
 
                 //const std::unique_ptr<Move> left_take_with_promotion_move = std::make_unique<TakeWithPromotionMove()
             } else{
-                legal_moves.push_back(right_take_move);
+                legal_moves.push_back(std::move(right_take_move));
             }
         }
     }
@@ -202,7 +188,7 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
     if(enpassant != -1 && square_rank == this->enpassant_rank){
         const Piece opponent_pawn = getPlayerPawn(opponent);
         if(square_file - 1 == enpassant){
-            const std::unique_ptr<Move> enpassant_move = std::make_unique<EnpassantMove>
+            std::unique_ptr<Move> enpassant_move = std::make_unique<EnpassantMove>
             (
                 piece, 
                 square, 
@@ -211,12 +197,12 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
                 square - 1
             );
             if(chessboard.isMoveLegal(enpassant_move)){
-                legal_moves.push_back(enpassant_move);
+                legal_moves.push_back(std::move(enpassant_move));
             }
             
 
         } else if(square_file + 1 == enpassant){
-            const std::unique_ptr<Move> enpassant_move = std::make_unique<EnpassantMove>
+            std::unique_ptr<Move> enpassant_move = std::make_unique<EnpassantMove>
             (
                 piece, 
                 square, 
@@ -225,7 +211,7 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
                 square + 1
             );
             if(chessboard.isMoveLegal(enpassant_move)){
-                legal_moves.push_back(enpassant_move);
+                legal_moves.push_back(std::move(enpassant_move));
             }   
             
         }
@@ -233,12 +219,12 @@ std::vector<std::unique_ptr<Move>> PawnMoveBehaviour::getLegalMoves
     return legal_moves;
 }
 
-inline bool PawnMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square){
+inline bool PawnMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square) const{
     return target_square == piece_square + this->forward_move_step * 8 + 1 ||
            target_square == piece_square + this->forward_move_step * 8 - 1;
 }
 
-
+KnightMoveBehaviour::KnightMoveBehaviour(){}
 
 std::vector<std::unique_ptr<Move>> KnightMoveBehaviour::getLegalMoves
 (
@@ -246,65 +232,65 @@ std::vector<std::unique_ptr<Move>> KnightMoveBehaviour::getLegalMoves
     Piece piece,
     uint8_t square,
     Chessboard &chessboard
-)
+) const
 {
     std::vector<std::unique_ptr<Move>> legal_moves{};
     const auto square_file = square % 8;
     const auto square_rank = square >> 3;
     const Player opponent = getOpponentPlayer(player);
     if(square_file < 7 && square_rank < 6){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+17);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+17);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     if(square_file > 0 && square_rank < 6){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+15);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+15);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     if(square_file < 6 && square_rank < 7){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+10);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+10);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     if(square_file > 1 && square_rank < 7){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+6);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square+6);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     if(square_file < 6 && square_rank > 0){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-6);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-6);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     if(square_file > 1 && square_rank > 0){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-10);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-10);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     if(square_file < 7 && square_rank > 1){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-15);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-15);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     if(square_file > 0 && square_rank > 1){
-        const auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-17);
+        auto move = this->getLegalPieceToSquareMove(player, piece, square, chessboard, square-17);
         if(move != nullptr){
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
         }   
     }
     return legal_moves;
 }
 
 
-inline bool KnightMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square){
+inline bool KnightMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square) const {
     const uint8_t square_rank = piece_square >> 3;
     const uint8_t square_file = piece_square % 8;
     return
@@ -321,10 +307,10 @@ inline bool KnightMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, u
 }
 
 
-BishopMoveBehaviour::BishopMoveBehaviour(DiagonalMoveBehaviour &diagonal_move_behaviour){
-    this->diagonal_move_behaviour = diagonal_move_behaviour;
+BishopMoveBehaviour::BishopMoveBehaviour(const DiagonalMoveBehaviour &diagonal_move_behaviour)
+: diagonal_move_behaviour(diagonal_move_behaviour)
+{
 }
-
 
 std::vector<std::unique_ptr<Move>> BishopMoveBehaviour::getLegalMoves
 (
@@ -332,10 +318,10 @@ std::vector<std::unique_ptr<Move>> BishopMoveBehaviour::getLegalMoves
     Piece piece,
     uint8_t square,
     Chessboard &chessboard
-)
+) const
 {
     std::vector<std::unique_ptr<Move>> legal_moves{};
-    const std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -345,7 +331,7 @@ std::vector<std::unique_ptr<Move>> BishopMoveBehaviour::getLegalMoves
         1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -355,7 +341,7 @@ std::vector<std::unique_ptr<Move>> BishopMoveBehaviour::getLegalMoves
         1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -365,7 +351,7 @@ std::vector<std::unique_ptr<Move>> BishopMoveBehaviour::getLegalMoves
         -1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -375,17 +361,37 @@ std::vector<std::unique_ptr<Move>> BishopMoveBehaviour::getLegalMoves
         -1,
         *this
     );
-    legal_moves.insert(legal_moves.end(), upper_right_diagonal_moves.begin(), upper_right_diagonal_moves.end());
-    legal_moves.insert(legal_moves.end(), upper_left_diagonal_moves.begin(), upper_left_diagonal_moves.end());
-    legal_moves.insert(legal_moves.end(), lower_right_diagonal_moves.begin(), lower_right_diagonal_moves.end());
-    legal_moves.insert(legal_moves.end(), lower_left_diagonal_moves.begin(), lower_left_diagonal_moves.end());
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(upper_right_diagonal_moves.begin()), 
+        std::make_move_iterator(upper_right_diagonal_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(upper_left_diagonal_moves.begin()), 
+        std::make_move_iterator(upper_left_diagonal_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(lower_right_diagonal_moves.begin()), 
+        std::make_move_iterator(lower_right_diagonal_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(lower_left_diagonal_moves.begin()), 
+        std::make_move_iterator(lower_left_diagonal_moves.end())
+    );
     return legal_moves;
 }
 
 
 
 
-bool BishopMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square){
+bool BishopMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square) const{
     const auto diff = target_square > piece_square ? target_square - piece_square : piece_square - target_square;
     const auto start = target_square > piece_square ? piece_square : target_square;
     const auto end = target_square > piece_square ? target_square : piece_square;
@@ -397,10 +403,9 @@ bool BishopMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t 
 
 
 
-RookMoveBehaviour::RookMoveBehaviour(StraightMoveBehaviour &straight_move_behaviour){
-    this->straight_move_behaviour = straight_move_behaviour;
-
-
+RookMoveBehaviour::RookMoveBehaviour(const StraightMoveBehaviour &straight_move_behaviour)
+: straight_move_behaviour(straight_move_behaviour)
+{
 }
 
 
@@ -411,11 +416,11 @@ std::vector<std::unique_ptr<Move>> RookMoveBehaviour::getLegalMoves
     Piece piece,
     uint8_t square,
     Chessboard &chessboard
-)
+) const
 {
     std::vector<std::unique_ptr<Move>> legal_moves{};
 
-    const std::vector<std::unique_ptr<Move>> straight_up_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_up_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -425,7 +430,7 @@ std::vector<std::unique_ptr<Move>> RookMoveBehaviour::getLegalMoves
         1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> straight_down_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_down_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -435,7 +440,7 @@ std::vector<std::unique_ptr<Move>> RookMoveBehaviour::getLegalMoves
         -1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> straight_right_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_right_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -445,7 +450,7 @@ std::vector<std::unique_ptr<Move>> RookMoveBehaviour::getLegalMoves
         0,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> straight_left_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_left_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -455,15 +460,35 @@ std::vector<std::unique_ptr<Move>> RookMoveBehaviour::getLegalMoves
         0,
         *this
     );
-    legal_moves.insert(legal_moves.end(), straight_up_moves.begin(), straight_up_moves.end());
-    legal_moves.insert(legal_moves.end(), straight_down_moves.begin(), straight_down_moves.end());
-    legal_moves.insert(legal_moves.end(), straight_right_moves.begin(), straight_right_moves.end());
-    legal_moves.insert(legal_moves.end(), straight_right_moves.begin(), straight_left_moves.end());
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(straight_up_moves.begin()), 
+        std::make_move_iterator(straight_up_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(straight_down_moves.begin()), 
+        std::make_move_iterator(straight_down_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(straight_right_moves.begin()), 
+        std::make_move_iterator(straight_right_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(straight_right_moves.begin()), 
+        std::make_move_iterator(straight_left_moves.end())
+    );
     return legal_moves;
 }
 
 
-bool RookMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square){
+bool RookMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square) const {
     const auto diff = target_square > piece_square ? target_square - piece_square : piece_square - target_square;
     const auto start = target_square > piece_square ? piece_square : target_square;
     const auto end = target_square > piece_square ? target_square : piece_square;
@@ -474,9 +499,11 @@ bool RookMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t pi
     return chessboard.isStraightBetweenSquaresEmpty(start, end, step);
 }
 
-QueenMoveBehaviour::QueenMoveBehaviour(StraightMoveBehaviour &straight_move_behaviour, DiagonalMoveBehaviour &diagonal_move_behaviour){
-    this->straight_move_behaviour = straight_move_behaviour;
-    this->diagonal_move_behaviour = diagonal_move_behaviour;
+QueenMoveBehaviour::QueenMoveBehaviour(const StraightMoveBehaviour &straight_move_behaviour, const DiagonalMoveBehaviour &diagonal_move_behaviour)
+: straight_move_behaviour(straight_move_behaviour),
+  diagonal_move_behaviour(diagonal_move_behaviour)
+{
+
 }
 
 std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
@@ -485,10 +512,10 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
     Piece piece,
     uint8_t square,
     Chessboard &chessboard
-)
+) const
 {
     std::vector<std::unique_ptr<Move>> legal_moves{};
-    const std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> upper_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -498,7 +525,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> upper_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -508,7 +535,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> lower_right_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -518,7 +545,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         -1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
+    std::vector<std::unique_ptr<Move>> lower_left_diagonal_moves = this->diagonal_move_behaviour.getLegalMovesOnDiagonal
     (
         player, 
         piece,
@@ -530,7 +557,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
     );
 
 
-    const std::vector<std::unique_ptr<Move>> straight_up_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_up_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -540,7 +567,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> straight_down_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_down_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -550,7 +577,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         -1,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> straight_right_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_right_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -560,7 +587,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         0,
         *this
     );
-    const std::vector<std::unique_ptr<Move>> straight_left_moves = this->straight_move_behaviour.getLegalMovesOnStraight
+    std::vector<std::unique_ptr<Move>> straight_left_moves = this->straight_move_behaviour.getLegalMovesOnStraight
     (
         player, 
         piece,
@@ -570,14 +597,53 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
         0,
         *this
     );
-    legal_moves.insert(legal_moves.end(), straight_up_moves.begin(), straight_up_moves.end());
-    legal_moves.insert(legal_moves.end(), straight_down_moves.begin(), straight_down_moves.end());
-    legal_moves.insert(legal_moves.end(), straight_right_moves.begin(), straight_right_moves.end());
-    legal_moves.insert(legal_moves.end(), straight_right_moves.begin(), straight_left_moves.end());
-    legal_moves.insert(legal_moves.end(), upper_right_diagonal_moves.begin(), upper_right_diagonal_moves.end());
-    legal_moves.insert(legal_moves.end(), upper_left_diagonal_moves.begin(), upper_left_diagonal_moves.end());
-    legal_moves.insert(legal_moves.end(), lower_right_diagonal_moves.begin(), lower_right_diagonal_moves.end());
-    legal_moves.insert(legal_moves.end(), lower_left_diagonal_moves.begin(), lower_left_diagonal_moves.end());
+    legal_moves.insert(
+        legal_moves.end(), 
+        std::make_move_iterator(straight_up_moves.begin()), 
+        std::make_move_iterator(straight_up_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(straight_down_moves.begin()), 
+        std::make_move_iterator(straight_down_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(straight_right_moves.begin()), 
+        std::make_move_iterator(straight_right_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(straight_right_moves.begin()), 
+        std::make_move_iterator(straight_left_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(upper_right_diagonal_moves.begin()), 
+        std::make_move_iterator(upper_right_diagonal_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(upper_left_diagonal_moves.begin()), 
+        std::make_move_iterator(upper_left_diagonal_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(lower_right_diagonal_moves.begin()), 
+        std::make_move_iterator(lower_right_diagonal_moves.end())
+    );
+    legal_moves.insert
+    (
+        legal_moves.end(), 
+        std::make_move_iterator(lower_left_diagonal_moves.begin()), 
+        std::make_move_iterator(lower_left_diagonal_moves.end())
+    );
     return legal_moves;
 }
 
@@ -590,8 +656,7 @@ std::vector<std::unique_ptr<Move>> QueenMoveBehaviour::getLegalMoves
 
 
 
-
-bool QueenMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square){
+bool QueenMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square) const {
     const auto diff = target_square > piece_square ? target_square - piece_square : piece_square - target_square;
     const auto start = target_square > piece_square ? piece_square : target_square;
     const auto end = target_square > piece_square ? target_square : piece_square;
@@ -606,19 +671,24 @@ bool QueenMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t p
     return false;
 }
 
+KingMoveBehaviour::KingMoveBehaviour(){}
+
+
+
 std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
 (
     Player player, 
     Piece piece,
     uint8_t square,
     Chessboard &chessboard
-)
+) const
 {
+    std::printf("KingMoveBehaviour::getLegalMoves START\n");
     std::vector<std::unique_ptr<Move>> legal_moves{};
     const auto king_rank = getSquareRank(square);
     const auto king_file = getSquareFile(square);
     if(king_rank < 7 && king_file < 7){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -626,12 +696,13 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square + 9
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
+     std::printf("KingMoveBehaviour::getLegalMoves AFTER FIRST CHECK\n");
     if(king_rank < 7){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -639,12 +710,12 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square + 8
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
     if(king_rank < 7 && king_file > 0){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -652,12 +723,12 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square + 7
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
     if(king_file < 7){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -665,12 +736,12 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square + 1
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
     if(king_file > 0){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -678,12 +749,12 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square - 1
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
     if(king_rank > 0 && king_file < 7){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -691,12 +762,12 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square - 7
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
     if(king_rank > 0){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -704,12 +775,12 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square - 8
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
     if(king_rank > 0 && king_file > 0){
-        const std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = this->getLegalPieceToSquareMove
         (
             player,
             piece, 
@@ -717,8 +788,8 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
             chessboard,
             square - 9
         );
-        if(chessboard.isMoveLegal(move)){
-            legal_moves.push_back(move);
+        if(move != nullptr  && chessboard.isMoveLegal(move)){
+            legal_moves.push_back(std::move(move));
         }
     }
     return legal_moves;
@@ -726,7 +797,7 @@ std::vector<std::unique_ptr<Move>> KingMoveBehaviour::getLegalMoves
 
 
 
-inline bool KingMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square){
+inline bool KingMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uint8_t piece_square, uint8_t target_square) const {
     const auto king_rank = piece_square >> 3;
     const auto king_file = piece_square % 8;
     return king_rank < 7 && king_file < 7 && target_square - piece_square == 9 ||
@@ -739,7 +810,6 @@ inline bool KingMoveBehaviour::doesPieceAttackSquare(Chessboard &chessboard, uin
            king_rank > 0 && king_file > 0 && piece_square - target_square == 9;
 }
 
-
 std::vector<std::unique_ptr<Move>> DiagonalMoveBehaviour::getLegalMovesOnDiagonal
 (
     Player player,
@@ -748,21 +818,21 @@ std::vector<std::unique_ptr<Move>> DiagonalMoveBehaviour::getLegalMovesOnDiagona
     Chessboard &chessboard,
     int8_t file_step,
     int8_t rank_step,
-    PieceMoveBehaviour &piece_move_behaviour
-)
+    const PieceMoveBehaviour &piece_move_behaviour
+)const 
 {
     std::vector<std::unique_ptr<Move>> legal_moves{};
     const uint8_t rank_limit = rank_step == -1 ? 0 : 7;
     const uint8_t file_limit = file_step == -1 ? 0 : 7;
-    uint8_t current_file = square % 8;
-    uint8_t current_rank = square >> 3;
+    uint8_t current_file = getSquareFile(square);
+    uint8_t current_rank = getSquareRank(square);
     uint8_t current_square = square;
     const int8_t square_step = 8*rank_step + file_step;
     while(current_file != file_limit && current_rank != rank_step){
         current_file+=file_step;
         current_rank+=rank_step;
         current_square+=square_step;
-        const std::unique_ptr<Move> move = piece_move_behaviour.getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = piece_move_behaviour.getLegalPieceToSquareMove
         (
             player,
             piece,
@@ -774,7 +844,7 @@ std::vector<std::unique_ptr<Move>> DiagonalMoveBehaviour::getLegalMovesOnDiagona
             return legal_moves;
         }
         else{
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
             if(dynamic_cast<TakeMove*>(move.get())){
                 return legal_moves;
             }
@@ -791,8 +861,8 @@ std::vector<std::unique_ptr<Move>> StraightMoveBehaviour::getLegalMovesOnStraigh
     Chessboard &chessboard,
     int8_t file_step,
     int8_t rank_step,
-    PieceMoveBehaviour &piece_move_behaviour
-)
+    const PieceMoveBehaviour &piece_move_behaviour
+) const
 {
     
     std::vector<std::unique_ptr<Move>> legal_moves{};
@@ -811,7 +881,7 @@ std::vector<std::unique_ptr<Move>> StraightMoveBehaviour::getLegalMovesOnStraigh
     while(current_rank_or_file != rank_or_file_limit){
         current_rank_or_file+=rank_or_file_step;
         current_square+=square_step;
-        const std::unique_ptr<Move> move = piece_move_behaviour.getLegalPieceToSquareMove
+        std::unique_ptr<Move> move = piece_move_behaviour.getLegalPieceToSquareMove
         (
             player,
             piece,
@@ -823,7 +893,7 @@ std::vector<std::unique_ptr<Move>> StraightMoveBehaviour::getLegalMovesOnStraigh
             return legal_moves;
         }
         else{
-            legal_moves.push_back(move);
+            legal_moves.push_back(std::move(move));
             if(dynamic_cast<TakeMove*>(move.get())){
                 return legal_moves;
             }
